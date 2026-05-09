@@ -57,14 +57,25 @@ export default function Employees() {
     }
   };
 
-  const filteredEmployees = (empleados || []).filter(emp => {
+  const formatDateSafe = (dateStr: string | undefined | null) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'N/A';
+      return format(date, 'dd/MM/yyyy');
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
+  const filteredEmployees = Array.isArray(empleados) ? empleados.filter(emp => {
     const nombreCompleto = `${emp.nombre || ''} ${emp.apellido || ''}`.toLowerCase();
     const findTerm = (searchTerm || '').toLowerCase();
     
     return nombreCompleto.includes(findTerm) ||
       (emp.legajo || '').toLowerCase().includes(findTerm) ||
       (emp.dni || '').toLowerCase().includes(findTerm);
-  });
+  }) : [];
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -107,8 +118,8 @@ export default function Employees() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredEmployees.map((emp) => (
-              <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+            {filteredEmployees.map((emp, idx) => (
+              <tr key={emp?.id || `emp-${idx}`} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
                     {(emp.nombre?.[0] || '?')}{(emp.apellido?.[0] || '?')}
@@ -125,14 +136,14 @@ export default function Employees() {
                 <td className="px-6 py-4">
                   <div className="text-slate-600">{emp.categoria || 'Sin categoría'}</div>
                   <div className="text-[10px] text-slate-400">
-                    Ingreso: {emp.fechaIngreso ? format(new Date(emp.fechaIngreso), 'dd/MM/yyyy') : 'N/A'}
+                    Ingreso: {formatDateSafe(emp.fechaIngreso)}
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    emp.estado === 'ACTIVO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    emp?.estado === 'ACTIVO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                   }`}>
-                    {emp.estado}
+                    {emp?.estado || 'INACTIVO'}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">

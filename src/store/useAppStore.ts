@@ -164,22 +164,30 @@ export const useAppStore = create<AppState>((set) => ({
   fetchEmployees: async () => {
     try {
       const response = await api.get('/empleados');
-      set({ empleados: response.data });
+      if (Array.isArray(response.data)) {
+        set({ empleados: response.data });
+      } else {
+        console.error('Expected array of employees, got:', response.data);
+        set({ empleados: [] });
+      }
     } catch (error) {
       console.error('Error fetching employees:', error);
+      set({ empleados: [] });
     }
   },
   createEmployee: async (data) => {
     try {
-      await api.post('/empleados', {
+      console.log('Enviando datos de empleado:', data);
+      const response = await api.post('/empleados', {
         ...data,
         estado: 'ACTIVO',
-        categoria: 'Administrativo', // Default for now
+        categoria: 'Administrativo', 
         tipoJornada: 'FULL_TIME',
-        horarioId: 'h1' // Default for now
+        horarioId: 'h1' 
       });
-    } catch (error) {
-      console.error('Error creating employee:', error);
+      console.log('Respuesta de creación:', response.data);
+    } catch (error: any) {
+      console.error('Error in createEmployee:', error.response?.data || error.message);
       throw error;
     }
   },
