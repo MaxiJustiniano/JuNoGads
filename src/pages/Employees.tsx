@@ -57,11 +57,14 @@ export default function Employees() {
     }
   };
 
-  const filteredEmployees = empleados.filter(emp => 
-    `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.legajo.includes(searchTerm) ||
-    emp.dni.includes(searchTerm)
-  );
+  const filteredEmployees = (empleados || []).filter(emp => {
+    const nombreCompleto = `${emp.nombre || ''} ${emp.apellido || ''}`.toLowerCase();
+    const findTerm = (searchTerm || '').toLowerCase();
+    
+    return nombreCompleto.includes(findTerm) ||
+      (emp.legajo || '').toLowerCase().includes(findTerm) ||
+      (emp.dni || '').toLowerCase().includes(findTerm);
+  });
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -108,20 +111,22 @@ export default function Employees() {
               <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
-                    {emp.nombre[0]}{emp.apellido[0]}
+                    {(emp.nombre?.[0] || '?')}{(emp.apellido?.[0] || '?')}
                   </div>
                   <div>
-                    <div className="font-medium text-slate-800">{emp.nombre} {emp.apellido}</div>
-                    <div className="text-[10px] text-slate-400">CUIL {emp.cuil}</div>
+                    <div className="font-medium text-slate-800">{emp.nombre || 'Sin nombre'} {emp.apellido || ''}</div>
+                    <div className="text-[10px] text-slate-400">CUIL {emp.cuil || '-'}</div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="font-mono text-slate-700">#{emp.legajo}</div>
-                  <div className="text-[10px] text-slate-400">DNI {emp.dni}</div>
+                  <div className="font-mono text-slate-700">#{emp.legajo || 'N/A'}</div>
+                  <div className="text-[10px] text-slate-400">DNI {emp.dni || '-'}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-slate-600">{emp.categoria}</div>
-                  <div className="text-[10px] text-slate-400">Ingreso: {format(new Date(emp.fechaIngreso), 'dd/MM/yyyy')}</div>
+                  <div className="text-slate-600">{emp.categoria || 'Sin categoría'}</div>
+                  <div className="text-[10px] text-slate-400">
+                    Ingreso: {emp.fechaIngreso ? format(new Date(emp.fechaIngreso), 'dd/MM/yyyy') : 'N/A'}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
