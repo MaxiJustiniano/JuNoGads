@@ -4,10 +4,13 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('Supabase credentials missing. Database operations will fail.');
+  const missing = [];
+  if (!supabaseUrl) missing.push('SUPABASE_URL');
+  if (!supabaseServiceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  console.error(`FATAL: Missing Supabase credentials: ${missing.join(', ')}`);
 }
 
 export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseServiceKey || ''
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseServiceKey || 'placeholder-key'
 );

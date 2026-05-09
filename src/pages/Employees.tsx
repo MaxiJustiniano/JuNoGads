@@ -16,13 +16,46 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export default function Employees() {
-  const { empleados, fetchEmployees } = useAppStore();
+  const { empleados, fetchEmployees, createEmployee } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    nombre: '',
+    apellido: '',
+    dni: '',
+    legajo: '',
+    cuil: '',
+    fechaIngreso: format(new Date(), 'yyyy-MM-dd')
+  });
 
   useEffect(() => {
     fetchEmployees();
   }, [fetchEmployees]);
+
+  const handleCreate = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await createEmployee(formData);
+      setIsModalOpen(false);
+      fetchEmployees();
+      setFormData({
+        nombre: '',
+        apellido: '',
+        dni: '',
+        legajo: '',
+        cuil: '',
+        fechaIngreso: format(new Date(), 'yyyy-MM-dd')
+      });
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Error al crear empleado');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredEmployees = empleados.filter(emp => 
     `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -132,46 +165,89 @@ export default function Employees() {
               className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden"
             >
               <div className="p-8">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">Nuevo Empleado</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-6 uppercase tracking-tight">Registar Nuevo Empleado</h2>
+                
+                {error && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl uppercase tracking-wider">
+                    {error}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre</label>
-                      <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-900 transition-all" />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Nombre</label>
+                      <input 
+                        type="text" 
+                        value={formData.nombre}
+                        onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Apellido</label>
-                      <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-900 transition-all" />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Apellido</label>
+                      <input 
+                        type="text" 
+                        value={formData.apellido}
+                        onChange={(e) => setFormData({...formData, apellido: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">DNI</label>
-                      <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-900 transition-all" />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">DNI</label>
+                      <input 
+                        type="text" 
+                        value={formData.dni}
+                        onChange={(e) => setFormData({...formData, dni: e.target.value})}
+                        placeholder="Ej: 30.123.456"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                      />
                     </div>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Legajo</label>
-                      <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-900 transition-all" />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Legajo</label>
+                      <input 
+                        type="text" 
+                        value={formData.legajo}
+                        onChange={(e) => setFormData({...formData, legajo: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CUIL</label>
-                      <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-900 transition-all" />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">CUIL</label>
+                      <input 
+                        type="text" 
+                        value={formData.cuil}
+                        onChange={(e) => setFormData({...formData, cuil: e.target.value})}
+                        placeholder="Ej: 20-30123456-7"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Ingreso</label>
-                      <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-900 transition-all" />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Fecha Ingreso</label>
+                      <input 
+                        type="date" 
+                        value={formData.fechaIngreso}
+                        onChange={(e) => setFormData({...formData, fechaIngreso: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                      />
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 mt-8">
                   <button 
                     onClick={() => setIsModalOpen(false)}
-                    className="px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+                    className="px-6 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-50 rounded-xl transition-all"
                   >
                     Cancelar
                   </button>
-                  <button className="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-medium hover:bg-slate-800 transition-all active:scale-95">
-                    Guardar
+                  <button 
+                    onClick={handleCreate}
+                    disabled={isLoading}
+                    className="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Registrando...' : 'Confirmar Registro'}
                   </button>
                 </div>
               </div>

@@ -95,6 +95,7 @@ interface AppState {
   setEmployees: (emps: Empleado[]) => void;
   setCurrentUser: (user: User | null) => void;
   fetchEmployees: () => Promise<void>;
+  createEmployee: (data: Omit<Empleado, 'id' | 'estado'>) => Promise<void>;
   fetchHorarios: () => Promise<void>;
 }
 
@@ -166,6 +167,20 @@ export const useAppStore = create<AppState>((set) => ({
       set({ empleados: response.data });
     } catch (error) {
       console.error('Error fetching employees:', error);
+    }
+  },
+  createEmployee: async (data) => {
+    try {
+      await api.post('/empleados', {
+        ...data,
+        estado: 'ACTIVO',
+        categoria: 'Administrativo', // Default for now
+        tipoJornada: 'FULL_TIME',
+        horarioId: 'h1' // Default for now
+      });
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      throw error;
     }
   },
   fetchHorarios: async () => {
