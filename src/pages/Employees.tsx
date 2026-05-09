@@ -118,39 +118,42 @@ export default function Employees() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredEmployees.map((emp, idx) => (
-              <tr key={emp?.id || `emp-${idx}`} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4 flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
-                    {(emp.nombre?.[0] || '?')}{(emp.apellido?.[0] || '?')}
-                  </div>
-                  <div>
-                    <div className="font-medium text-slate-800">{emp.nombre || 'Sin nombre'} {emp.apellido || ''}</div>
-                    <div className="text-[10px] text-slate-400">CUIL {emp.cuil || '-'}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="font-mono text-slate-700">#{emp.legajo || 'N/A'}</div>
-                  <div className="text-[10px] text-slate-400">DNI {emp.dni || '-'}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-slate-600">{emp.categoria || 'Sin categoría'}</div>
-                  <div className="text-[10px] text-slate-400">
-                    Ingreso: {formatDateSafe(emp.fechaIngreso)}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    emp?.estado === 'ACTIVO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {emp?.estado || 'INACTIVO'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="text-slate-400 hover:text-indigo-600 font-semibold transition-colors">Detalles</button>
-                </td>
-              </tr>
-            ))}
+            {filteredEmployees.map((emp, idx) => {
+              if (!emp) return null;
+              return (
+                <tr key={emp?.id || `emp-${idx}`} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4 flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
+                      {(emp.nombre?.[0] || '?')}{(emp.apellido?.[0] || '?')}
+                    </div>
+                    <div>
+                      <div className="font-medium text-slate-800">{emp.nombre || 'Sin nombre'} {emp.apellido || ''}</div>
+                      <div className="text-[10px] text-slate-400">CUIL {emp.cuil || '-'}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="font-mono text-slate-700">#{emp.legajo || 'N/A'}</div>
+                    <div className="text-[10px] text-slate-400">DNI {emp.dni || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-slate-600">{emp.categoria || 'Sin categoría'}</div>
+                    <div className="text-[10px] text-slate-400">
+                      Ingreso: {formatDateSafe(emp.fechaIngreso)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      emp?.estado === 'ACTIVO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {emp?.estado || 'INACTIVO'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button className="text-slate-400 hover:text-indigo-600 font-semibold transition-colors">Detalles</button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {filteredEmployees.length === 0 && (
@@ -185,7 +188,7 @@ export default function Employees() {
                 
                 {error && (
                   <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl uppercase tracking-wider">
-                    {error}
+                    {typeof error === 'string' ? error : (typeof error === 'object' && error !== null && 'message' in error) ? (error as any).message : JSON.stringify(error)}
                   </div>
                 )}
 

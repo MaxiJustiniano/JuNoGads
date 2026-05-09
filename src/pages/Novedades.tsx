@@ -93,13 +93,13 @@ export default function Novedades() {
             {novedades.map((nov) => (
               <tr key={nov.id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">
-                    {nov.empleado?.nombre[0]}{nov.empleado?.apellido[0]}
+                  <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs uppercase">
+                    {(nov.empleado?.nombre?.[0] || '?')}{(nov.empleado?.apellido?.[0] || '?')}
                   </div>
                   <div>
-                    <div className="font-medium text-slate-800">{nov.empleado?.apellido}, {nov.empleado?.nombre}</div>
+                    <div className="font-medium text-slate-800">{nov.empleado?.apellido || '-'}, {nov.empleado?.nombre || '-'}</div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-tighter bg-indigo-50 px-1.5 rounded">{nov.tipo.replace(/_/g, ' ')}</span>
+                      <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-tighter bg-indigo-50 px-1.5 rounded">{(nov.tipo || '').replace(/_/g, ' ')}</span>
                     </div>
                   </div>
                 </td>

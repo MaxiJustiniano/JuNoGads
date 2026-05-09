@@ -18,7 +18,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
         </div>
         <h2 className="text-xl font-bold text-slate-900 mb-2 uppercase tracking-tight">Algo salió mal</h2>
         <p className="text-slate-500 text-sm mb-6 bg-slate-50 p-3 rounded-lg font-mono text-left overflow-auto max-h-32 mb-4">
-          {error.message}
+          {typeof error.message === 'string' ? error.message : JSON.stringify(error.message || error)}
         </p>
         <button
           onClick={resetErrorBoundary}

@@ -160,11 +160,11 @@ export default function Attendance() {
                   <tr key={f.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 flex items-center space-x-3">
                       <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs uppercase tracking-tighter">
-                        {f.empleado?.nombre[0]}{f.empleado?.apellido[0]}
+                        {(f.empleado?.nombre?.[0] || '?')}{(f.empleado?.apellido?.[0] || '?')}
                       </div>
                       <div>
-                        <div className="font-medium text-slate-800">{f.empleado?.apellido}, {f.empleado?.nombre}</div>
-                        <div className="text-[10px] text-slate-400"># {f.empleado?.legajo}</div>
+                        <div className="font-medium text-slate-800">{f.empleado?.apellido || '-'}, {f.empleado?.nombre || '-'}</div>
+                        <div className="text-[10px] text-slate-400"># {f.empleado?.legajo || 'N/A'}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
