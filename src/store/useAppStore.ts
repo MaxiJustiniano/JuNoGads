@@ -187,7 +187,16 @@ export const useAppStore = create<AppState>((set) => ({
       });
       console.log('Respuesta de creación:', response.data);
     } catch (error: any) {
-      console.error('Error in createEmployee:', error.response?.data || error.message);
+      if (error.response) {
+        const contentType = error.response.headers['content-type'];
+        if (contentType && contentType.includes('text/html')) {
+          console.error('El servidor devolvió HTML en lugar de JSON. ¿Ruta incorrecta o caída?');
+          throw new Error('El servidor devolvió una página de error (404/500). Revisa las credenciales de Supabase.');
+        }
+        console.error('Error in createEmployee:', error.response.data || error.message);
+      } else {
+        console.error('Error in createEmployee (No response):', error.message);
+      }
       throw error;
     }
   },

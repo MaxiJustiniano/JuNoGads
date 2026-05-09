@@ -27,6 +27,12 @@ async function startServer() {
   app.use(express.json());
   app.use(morgan("dev"));
 
+  // Logging Middleware for /api
+  app.use("/api", (req, res, next) => {
+    console.log(`[API Request] ${req.method} ${req.path}`);
+    next();
+  });
+
   // --- API Routes (In a real app, these would be in separate files) ---
   
   app.get("/api/health", (req, res) => {
@@ -65,6 +71,18 @@ async function startServer() {
   app.get("/api/novedades", novedadController.getAll);
   app.post("/api/novedades", novedadController.create);
   app.patch("/api/novedades/:id/status", novedadController.updateStatus);
+
+  // Catch-all for API routes (unmatched API)
+  app.use("/api/*", (req, res) => {
+    console.warn(`[API 404] No match for: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({ error: `Ruta de API no encontrada: ${req.originalUrl}` });
+  });
+
+  // Global Error Handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("[Global Error Handled]:", err);
+    res.status(500).json({ error: "Error interno del servidor", message: err.message });
+  });
 
   // --- Vite Middleware ---
   if (process.env.NODE_ENV !== "production") {
