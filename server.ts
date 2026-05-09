@@ -39,6 +39,38 @@ async function startServer() {
     res.json({ status: "ok", message: "PymeTime API is running" });
   });
 
+  app.get("/api/diagnose-supabase", async (req, res) => {
+    try {
+      const { data, error } = await supabase.from('empleados').select('*').limit(1);
+      
+      if (error) {
+        return res.status(500).json({
+          status: "error",
+          message: "Error al conectar con Supabase",
+          details: error.message,
+          hint: error.hint,
+          code: error.code
+        });
+      }
+
+      res.json({
+        status: "success",
+        message: "Conexión con Supabase exitosa",
+        data: {
+          table: 'empleados',
+          reachable: true,
+          count: data?.length || 0
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        status: "error",
+        message: "Excepción catastrófica al intentar conectar",
+        error: err.message
+      });
+    }
+  });
+
   app.post("/api/login", async (req, res) => {
     const { email, password } = req.body;
     

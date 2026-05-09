@@ -83,6 +83,20 @@ export default function Employees() {
         <div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight uppercase">Gestión de Empleados</h1>
           <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest">NexoLaboral • Personal Activo</p>
+          <button 
+            onClick={async () => {
+              try {
+                const res = await api.get('/diagnose-supabase');
+                alert(`✅ ${res.data.message}`);
+              } catch (err: any) {
+                alert(`❌ Error: ${err.response?.data?.message || err.message}\nDetalles: ${err.response?.data?.details || 'N/A'}`);
+              }
+            }}
+            className="mt-2 text-[9px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest flex items-center gap-1 transition-colors"
+          >
+            <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+            Diagnosticar Conexión
+          </button>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}

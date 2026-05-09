@@ -7,7 +7,9 @@ if (!supabaseUrl || !supabaseServiceKey) {
   const missing = [];
   if (!supabaseUrl) missing.push('SUPABASE_URL');
   if (!supabaseServiceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
-  console.error(`FATAL: Missing Supabase credentials: ${missing.join(', ')}`);
+  console.warn(`[Supabase Config] Missing credentials: ${missing.join(', ')}. Using placeholders.`);
+} else {
+  console.log(`[Supabase Config] Credentials detected. URL: ${supabaseUrl.substring(0, 15)}...`);
 }
 
 export const supabase = createClient(
