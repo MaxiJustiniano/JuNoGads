@@ -47,7 +47,7 @@ export class EmployeeRepository {
   async delete(id: string) {
     const { error } = await supabase
       .from('empleados')
-      .delete()
+      .update({ estado: 'INACTIVO' })
       .eq('id', id);
 
     if (error) throw error;

@@ -8,21 +8,27 @@ import {
   Edit2, 
   Trash2,
   Calendar,
-  Briefcase
+  Briefcase,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
+import { useRef } from 'react';
 
 export default function Employees() {
-  const { empleados, fetchEmployees, createEmployee, updateEmployee, deleteEmployee } = useAppStore();
+  const { empleados, fetchEmployees, createEmployee, updateEmployee, deleteEmployee, horarios, fetchHorarios } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('TODOS');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -33,12 +39,14 @@ export default function Employees() {
     fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
     categoria: '',
     tipoJornada: 'FULL_TIME',
-    horarioId: '81109015-ab23-4f9c-ad98-b80c352bbded'
+    horarioId: '',
+    estado: 'ACTIVO'
   });
 
   useEffect(() => {
     fetchEmployees();
-  }, [fetchEmployees]);
+    fetchHorarios();
+  }, [fetchEmployees, fetchHorarios]);
 
   const openCreateModal = () => {
     setEditingId(null);
@@ -51,7 +59,8 @@ export default function Employees() {
       fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
       categoria: '',
       tipoJornada: 'FULL_TIME',
-      horarioId: '81109015-ab23-4f9c-ad98-b80c352bbded'
+      horarioId: horarios.length > 0 ? horarios[0].id : '',
+      estado: 'ACTIVO'
     });
     setIsModalOpen(true);
   };
@@ -67,7 +76,8 @@ export default function Employees() {
       fechaIngreso: emp.fechaIngreso ? emp.fechaIngreso.split('T')[0] : format(new Date(), 'yyyy-MM-dd'),
       categoria: emp.categoria || '',
       tipoJornada: emp.tipoJornada || 'FULL_TIME',
-      horarioId: emp.horarioId || '81109015-ab23-4f9c-ad98-b80c352bbded'
+      horarioId: emp.horarioId || (horarios.length > 0 ? horarios[0].id : ''),
+      estado: emp.estado || 'ACTIVO'
     });
     setIsModalOpen(true);
   };
@@ -115,10 +125,60 @@ export default function Employees() {
     const nombreCompleto = `${emp.nombre || ''} ${emp.apellido || ''}`.toLowerCase();
     const findTerm = (searchTerm || '').toLowerCase();
     
-    return nombreCompleto.includes(findTerm) ||
+    const matchesSearch = nombreCompleto.includes(findTerm) ||
       (emp.legajo || '').toLowerCase().includes(findTerm) ||
       (emp.dni || '').toLowerCase().includes(findTerm);
+
+    const matchesStatus = statusFilter === 'TODOS' || (emp.estado || 'ACTIVO') === statusFilter;
+    
+    return matchesSearch && matchesStatus;
   }) : [];
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        let imported = 0;
+        for (const row of data as any[]) {
+          // Minimal mapping logic
+          const newEmp = {
+            nombre: row.Nombre || row.nombre || '',
+            apellido: row.Apellido || row.apellido || '',
+            dni: String(row.DNI || row.dni || ''),
+            legajo: String(row.Legajo || row.legajo || ''),
+            cuil: String(row.CUIL || row.cuil || ''),
+            fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
+            categoria: row.Categoria || row.categoria || 'Administrativo',
+            tipoJornada: row.TipoJornada || row.tipoJornada || 'FULL_TIME',
+            estado: 'ACTIVO',
+            horarioId: horarios.length > 0 ? horarios[0].id : null
+          };
+          if (newEmp.nombre && newEmp.dni) {
+            await createEmployee(newEmp as any);
+            imported++;
+          }
+        }
+        alert(`Se importaron ${imported} empleados correctamente.`);
+        fetchEmployees();
+      } catch (err: any) {
+        alert('Error al importar archivo: ' + err.message);
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -141,17 +201,34 @@ export default function Employees() {
             Diagnosticar Conexión
           </button>
         </div>
-        <button 
-          onClick={openCreateModal}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm active:scale-95"
-        >
-          <UserPlus className="w-4 h-4" />
-          Registrar Empleado
-        </button>
+        <div className="flex gap-2">
+          <input 
+            type="file" 
+            accept=".xlsx, .xls, .csv" 
+            className="hidden" 
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            {isImporting ? 'Importando...' : 'Importar Excel'}
+          </button>
+          <button 
+            onClick={openCreateModal}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm active:scale-95"
+          >
+            <UserPlus className="w-4 h-4" />
+            Registrar Empleado
+          </button>
+        </div>
       </header>
 
       <div className="flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1">
+        <div className="relative flex-1 w-full md:w-auto">
           <input 
             type="text" 
             placeholder="Buscar empleado por legajo, nombre o DNI..." 
@@ -160,6 +237,18 @@ export default function Employees() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+        </div>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-white border border-slate-200 rounded-md px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none w-full md:w-auto"
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="ACTIVO">Activos</option>
+            <option value="INACTIVO">Inactivos</option>
+            <option value="SUSPENDIDO">Suspendidos</option>
+          </select>
         </div>
       </div>
 
@@ -328,6 +417,68 @@ export default function Employees() {
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-6 border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-4">Información Laboral</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Categoría</label>
+                        <select 
+                          value={formData.categoria}
+                          onChange={(e) => setFormData({...formData, categoria: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        >
+                          <option value="">Seleccione Categoría</option>
+                          <option value="Administrativo">Administrativo</option>
+                          <option value="Operario">Operario</option>
+                          <option value="Gerencia">Gerencia</option>
+                          <option value="Soporte">Soporte</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Tipo de Jornada</label>
+                        <select 
+                          value={formData.tipoJornada}
+                          onChange={(e) => setFormData({...formData, tipoJornada: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        >
+                          <option value="FULL_TIME">Jornada Completa</option>
+                          <option value="PART_TIME">Media Jornada</option>
+                          <option value="FLEXIBLE">Flexible</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Horario Asignado</label>
+                        <select 
+                          value={formData.horarioId}
+                          onChange={(e) => setFormData({...formData, horarioId: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        >
+                          <option value="">Seleccione Horario</option>
+                          {horarios.map(h => (
+                            <option key={h.id} value={h.id}>{h.nombre} ({h.horaEntrada} - {h.horaSalida})</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Estado</label>
+                        <select 
+                          value={formData.estado}
+                          onChange={(e) => setFormData({...formData, estado: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        >
+                          <option value="ACTIVO">Activo</option>
+                          <option value="INACTIVO">Inactivo</option>
+                          <option value="SUSPENDIDO">Suspendido</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-3 mt-8">
                   <button 
                     onClick={() => setIsModalOpen(false)}
