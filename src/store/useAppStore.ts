@@ -96,6 +96,8 @@ interface AppState {
   setCurrentUser: (user: User | null) => void;
   fetchEmployees: () => Promise<void>;
   createEmployee: (data: Omit<Empleado, 'id' | 'estado'>) => Promise<void>;
+  updateEmployee: (id: string, data: Partial<Empleado>) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
   fetchHorarios: () => Promise<void>;
 }
 
@@ -149,6 +151,26 @@ export const useAppStore = create<AppState>((set) => ({
       } else {
         console.error('Error in createEmployee (No response):', error.message);
       }
+      throw error;
+    }
+  },
+  updateEmployee: async (id: string, data: Partial<Empleado>) => {
+    try {
+      await api.put(`/empleados/${id}`, data);
+      const emps = useAppStore.getState().empleados;
+      set({ empleados: emps.map(emp => emp.id === id ? { ...emp, ...data } : emp) });
+    } catch (error: any) {
+      console.error('Error in updateEmployee:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+  deleteEmployee: async (id: string) => {
+    try {
+      await api.delete(`/empleados/${id}`);
+      const emps = useAppStore.getState().empleados;
+      set({ empleados: emps.filter(emp => emp.id !== id) });
+    } catch (error: any) {
+      console.error('Error in deleteEmployee:', error.response?.data || error.message);
       throw error;
     }
   },

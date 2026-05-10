@@ -17,11 +17,12 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export default function Employees() {
-  const { empleados, fetchEmployees, createEmployee } = useAppStore();
+  const { empleados, fetchEmployees, createEmployee, updateEmployee, deleteEmployee } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -31,34 +32,69 @@ export default function Employees() {
     cuil: '',
     fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
     categoria: '',
-    tipoJornada: 'COMPLETA',
-    horarioId: 0
+    tipoJornada: 'FULL_TIME',
+    horarioId: '81109015-ab23-4f9c-ad98-b80c352bbded'
   });
 
   useEffect(() => {
     fetchEmployees();
   }, [fetchEmployees]);
 
-  const handleCreate = async () => {
+  const openCreateModal = () => {
+    setEditingId(null);
+    setFormData({
+      nombre: '',
+      apellido: '',
+      dni: '',
+      legajo: '',
+      cuil: '',
+      fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
+      categoria: '',
+      tipoJornada: 'FULL_TIME',
+      horarioId: '81109015-ab23-4f9c-ad98-b80c352bbded'
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (emp: any) => {
+    setEditingId(emp.id);
+    setFormData({
+      nombre: emp.nombre || '',
+      apellido: emp.apellido || '',
+      dni: emp.dni || '',
+      legajo: emp.legajo || '',
+      cuil: emp.cuil || '',
+      fechaIngreso: emp.fechaIngreso ? emp.fechaIngreso.split('T')[0] : format(new Date(), 'yyyy-MM-dd'),
+      categoria: emp.categoria || '',
+      tipoJornada: emp.tipoJornada || 'FULL_TIME',
+      horarioId: emp.horarioId || '81109015-ab23-4f9c-ad98-b80c352bbded'
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('¿Está seguro de eliminar este empleado?')) {
+      try {
+        await deleteEmployee(id);
+      } catch (err: any) {
+        alert(err.response?.data?.error || 'Error al eliminar');
+      }
+    }
+  };
+
+  const handleSave = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      await createEmployee(formData as any);
+      if (editingId) {
+        await updateEmployee(editingId, formData as any);
+      } else {
+        await createEmployee(formData as any);
+      }
       setIsModalOpen(false);
       fetchEmployees();
-      setFormData({
-        nombre: '',
-        apellido: '',
-        dni: '',
-        legajo: '',
-        cuil: '',
-        fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
-        categoria: '',
-        tipoJornada: 'COMPLETA',
-        horarioId: 0
-      });
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Error al crear empleado');
+      setError(err.response?.data?.error || err.message || 'Error al guardar empleado');
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +142,7 @@ export default function Employees() {
           </button>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="bg-indigo-600 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm active:scale-95"
         >
           <UserPlus className="w-4 h-4" />
@@ -170,7 +206,22 @@ export default function Employees() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-slate-400 hover:text-indigo-600 font-semibold transition-colors">Detalles</button>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => openEditModal(emp)}
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="Modificar empleado"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(emp.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Eliminar empleado"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -205,7 +256,9 @@ export default function Employees() {
               className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden"
             >
               <div className="p-8">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6 uppercase tracking-tight">Registar Nuevo Empleado</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-6 uppercase tracking-tight">
+                  {editingId ? 'Modificar Empleado' : 'Registrar Nuevo Empleado'}
+                </h2>
                 
                 {error && (
                   <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl uppercase tracking-wider">
@@ -283,11 +336,11 @@ export default function Employees() {
                     Cancelar
                   </button>
                   <button 
-                    onClick={handleCreate}
+                    onClick={handleSave}
                     disabled={isLoading}
                     className="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? 'Registrando...' : 'Confirmar Registro'}
+                    {isLoading ? 'Guardando...' : (editingId ? 'Guardar Cambios' : 'Confirmar Registro')}
                   </button>
                 </div>
               </div>
