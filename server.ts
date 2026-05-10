@@ -41,6 +41,18 @@ async function startServer() {
 
   app.get("/api/diagnose-supabase", async (req, res) => {
     try {
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!url || !key) {
+        return res.status(400).json({
+          status: "error",
+          message: "Credenciales faltantes en el servidor",
+          details: `Faltan: ${[!url && 'SUPABASE_URL', !key && 'SUPABASE_SERVICE_ROLE_KEY'].filter(Boolean).join(', ')}`,
+          hint: "Configura las variables en Settings -> Secrets de AI Studio."
+        });
+      }
+
       const { data, error } = await supabase.from('empleados').select('*').limit(1);
       
       if (error) {
