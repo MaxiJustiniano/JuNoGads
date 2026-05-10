@@ -16,128 +16,127 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { supabase } from './src/server/infrastructure/supabase';
 
+export const app = express();
+
 const JWT_SECRET = process.env.JWT_SECRET || 'pymetime_super_secret_key_123';
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+// Basic Middleware
+app.use(cors());
+app.use(express.json());
+app.use(morgan("dev"));
 
-  // Basic Middleware
-  app.use(cors());
-  app.use(express.json());
-  app.use(morgan("dev"));
+// Logging Middleware for /api
+app.use("/api", (req, res, next) => {
+  console.log(`[API Request] ${req.method} ${req.path}`);
+  next();
+});
 
-  // Logging Middleware for /api
-  app.use("/api", (req, res, next) => {
-    console.log(`[API Request] ${req.method} ${req.path}`);
-    next();
-  });
+// --- API Routes ---
 
-  // --- API Routes (In a real app, these would be in separate files) ---
-  
-  app.get("/api/health", (req, res) => {
-    // Health check endpoint for deployment verification
-    console.log("Health check pinged");
-    res.json({ status: "ok", message: "PymeTime API is running" });
-  });
+app.get("/api/health", (req, res) => {
+  console.log("Health check pinged");
+  res.json({ status: "ok", message: "PymeTime API is running" });
+});
 
-  app.get("/api/diagnose-supabase", async (req, res) => {
-    try {
-      const url = process.env.SUPABASE_URL;
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+app.get("/api/diagnose-supabase", async (req, res) => {
+  try {
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-      if (!url || !key) {
-        return res.status(400).json({
-          status: "error",
-          message: "Credenciales faltantes en el servidor",
-          details: `Faltan: ${[!url && 'SUPABASE_URL', !key && 'SUPABASE_SERVICE_ROLE_KEY'].filter(Boolean).join(', ')}`,
-          hint: "Configura las variables en Settings -> Secrets de AI Studio."
-        });
-      }
-
-      const { data, error } = await supabase.from('empleados').select('*').limit(1);
-      
-      if (error) {
-        return res.status(500).json({
-          status: "error",
-          message: "Error al conectar con Supabase",
-          details: error.message,
-          hint: error.hint,
-          code: error.code
-        });
-      }
-
-      res.json({
-        status: "success",
-        message: "Conexión con Supabase exitosa",
-        data: {
-          table: 'empleados',
-          reachable: true,
-          count: data?.length || 0
-        }
-      });
-    } catch (err: any) {
-      res.status(500).json({
+    if (!url || !key) {
+      return res.status(400).json({
         status: "error",
-        message: "Excepción catastrófica al intentar conectar",
-        error: err.message
+        message: "Credenciales faltantes en el servidor",
+        details: `Faltan: ${[!url && 'SUPABASE_URL', !key && 'SUPABASE_SERVICE_ROLE_KEY'].filter(Boolean).join(', ')}`,
+        hint: "Configura las variables en Vercel."
       });
     }
-  });
 
-  app.post("/api/login", async (req, res) => {
-    const { email, password } = req.body;
+    const { data, error } = await supabase.from('empleados').select('*').limit(1);
     
-    const { data: user, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    if (error || !user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
+    if (error) {
+      return res.status(500).json({
+        status: "error",
+        message: "Error al conectar con Supabase",
+        details: error.message,
+        hint: error.hint,
+        code: error.code
+      });
     }
-    const token = jwt.sign({ id: user.id, rol: user.rol }, JWT_SECRET, { expiresIn: '1d' });
-    res.json({ user, token });
-  });
 
-  const employeeController = new EmployeeController();
+    res.json({
+      status: "success",
+      message: "Conexión con Supabase exitosa",
+      data: {
+        table: 'empleados',
+        reachable: true,
+        count: data?.length || 0
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      status: "error",
+      message: "Excepción catastrófica al intentar conectar",
+      error: err.message
+    });
+  }
+});
 
-  app.get("/api/empleados", employeeController.getAll);
-  app.get("/api/empleados/:id", employeeController.getById);
-  app.post("/api/empleados", employeeController.create);
-  app.put("/api/empleados/:id", employeeController.update);
-  app.delete("/api/empleados/:id", employeeController.delete);
+app.post("/api/login", async (req, res) => {
+  const { email, password } = req.body;
+  
+  const { data: user, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('email', email)
+    .single();
 
-  const attendanceController = new AttendanceController();
-  app.post("/api/fichadas", attendanceController.register);
-  app.get("/api/fichadas/recientes", attendanceController.getRecent);
+  if (error || !user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ error: "Credenciales inválidas" });
+  }
+  const token = jwt.sign({ id: user.id, rol: user.rol }, JWT_SECRET, { expiresIn: '1d' });
+  res.json({ user, token });
+});
 
-  const novedadController = new NovedadController();
-  app.get("/api/novedades", novedadController.getAll);
-  app.post("/api/novedades", novedadController.create);
-  app.patch("/api/novedades/:id/status", novedadController.updateStatus);
+const employeeController = new EmployeeController();
+app.get("/api/empleados", employeeController.getAll);
+app.get("/api/empleados/:id", employeeController.getById);
+app.post("/api/empleados", employeeController.create);
+app.put("/api/empleados/:id", employeeController.update);
+app.delete("/api/empleados/:id", employeeController.delete);
 
-  // Catch-all for API routes (unmatched API)
-  app.use("/api/*", (req, res) => {
-    console.warn(`[API 404] No match for: ${req.method} ${req.originalUrl}`);
-    res.status(404).json({ error: `Ruta de API no encontrada: ${req.originalUrl}` });
-  });
+const attendanceController = new AttendanceController();
+app.post("/api/fichadas", attendanceController.register);
+app.get("/api/fichadas/recientes", attendanceController.getRecent);
 
-  // Global Error Handler
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error("[Global Error Handled]:", err);
-    res.status(500).json({ error: "Error interno del servidor", message: err.message });
-  });
+const novedadController = new NovedadController();
+app.get("/api/novedades", novedadController.getAll);
+app.post("/api/novedades", novedadController.create);
+app.patch("/api/novedades/:id/status", novedadController.updateStatus);
+
+// API Error Handler
+app.use("/api/*", (req, res) => {
+  console.warn(`[API 404] No match for: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ error: `Ruta de API no encontrada: ${req.originalUrl}` });
+});
+
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("[Global Error Handled]:", err);
+  res.status(500).json({ error: "Error interno del servidor", message: err.message });
+});
+
+async function startServer() {
+  const PORT = process.env.PORT || 3000;
 
   // --- Vite Middleware ---
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && process.env.VERCEL !== "1") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (process.env.VERCEL !== "1") {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
@@ -145,9 +144,13 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-  });
+  if (process.env.VERCEL !== "1") {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-startServer().catch(console.error);
+if (process.env.VERCEL !== "1") {
+  startServer().catch(console.error);
+}
