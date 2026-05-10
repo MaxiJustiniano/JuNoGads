@@ -37,6 +37,7 @@ async function startServer() {
   
   app.get("/api/health", (req, res) => {
     // Health check endpoint for deployment verification
+    console.log("Health check pinged");
     res.json({ status: "ok", message: "PymeTime API is running" });
   });
 
