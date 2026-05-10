@@ -99,6 +99,8 @@ interface AppState {
   updateEmployee: (id: string, data: Partial<Empleado>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   fetchHorarios: () => Promise<void>;
+  fetchFichadas: () => Promise<void>;
+  fetchNovedades: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -180,6 +182,25 @@ export const useAppStore = create<AppState>((set) => ({
       set({ horarios: response.data });
     } catch (error) {
       console.error('Error fetching schedules:', error);
+    }
+  },
+  fetchFichadas: async () => {
+    try {
+      const response = await api.get('/fichadas/recientes');
+      // Supabase or API might return an array
+      set({ fichadas: Array.isArray(response.data) ? response.data : [] });
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      set({ fichadas: [] });
+    }
+  },
+  fetchNovedades: async () => {
+    try {
+      const response = await api.get('/novedades');
+      set({ novedades: Array.isArray(response.data) ? response.data : [] });
+    } catch (error) {
+      console.error('Error fetching novedades:', error);
+      set({ novedades: [] });
     }
   }
 }));

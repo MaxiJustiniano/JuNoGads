@@ -105,6 +105,12 @@ app.post("/api/empleados", employeeController.create);
 app.put("/api/empleados/:id", employeeController.update);
 app.delete("/api/empleados/:id", employeeController.delete);
 
+app.get("/api/horarios", async (req, res) => {
+  const { data, error } = await supabase.from('horarios').select('*');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 const attendanceController = new AttendanceController();
 app.post("/api/fichadas", attendanceController.register);
 app.get("/api/fichadas/recientes", attendanceController.getRecent);
