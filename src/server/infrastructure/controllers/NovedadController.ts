@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { supabase } from "../supabase";
+import { supabase } from '../supabase.js';
 
 export class NovedadController {
   getAll = async (req: Request, res: Response) => {

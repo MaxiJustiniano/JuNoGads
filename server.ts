@@ -4,16 +4,16 @@ import path from "path";
 import cors from "cors";
 import morgan from "morgan";
 import { fileURLToPath } from "url";
-import { EmployeeController } from "./src/server/infrastructure/controllers/EmployeeController";
-import { AttendanceController } from "./src/server/infrastructure/controllers/AttendanceController";
-import { NovedadController } from "./src/server/infrastructure/controllers/NovedadController";
+import { EmployeeController } from './src/server/infrastructure/controllers/EmployeeController.js';
+import { AttendanceController } from './src/server/infrastructure/controllers/AttendanceController.js';
+import { NovedadController } from './src/server/infrastructure/controllers/NovedadController.js';
 
 // We can use process.cwd() for resolving the dist directory instead of __dirname
 // to avoid ESM/CJS compatibility issues on Vercel.
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { supabase } from './src/server/infrastructure/supabase';
+import { supabase } from './src/server/infrastructure/supabase.js';
 
 export const app = express();
 

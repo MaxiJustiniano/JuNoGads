@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+import { supabase } from '../supabase.js';
 
 export class AttendanceRepository {
   async register(data: any) {

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AttendanceRepository } from "../repositories/AttendanceRepository";
+import { AttendanceRepository } from '../repositories/AttendanceRepository.js';
 
 export class AttendanceController {
   private repository: AttendanceRepository;

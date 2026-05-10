@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { EmployeeService } from "../../application/services/EmployeeService";
+import { EmployeeService } from '../../application/services/EmployeeService.js';
 
 export class EmployeeController {
   private service: EmployeeService;

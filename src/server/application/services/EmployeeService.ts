@@ -1,4 +1,4 @@
-import { EmployeeRepository } from "../../infrastructure/repositories/EmployeeRepository";
+import { EmployeeRepository } from '../../infrastructure/repositories/EmployeeRepository.js';
 
 export class EmployeeService {
   private repository: EmployeeRepository;

@@ -1,5 +1,5 @@
-import { RulesEngine } from "./RulesEngine";
-import { supabase } from "../../infrastructure/supabase";
+import { RulesEngine } from './RulesEngine.js';
+import { supabase } from '../../infrastructure/supabase.js';
 import { eachDayOfInterval } from "date-fns";
 
 export class InterpretationService {
