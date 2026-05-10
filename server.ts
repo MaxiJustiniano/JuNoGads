@@ -1,5 +1,5 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
+// import { createServer as createViteServer } from "vite";
 import path from "path";
 import cors from "cors";
 import morgan from "morgan";
@@ -8,9 +8,8 @@ import { EmployeeController } from "./src/server/infrastructure/controllers/Empl
 import { AttendanceController } from "./src/server/infrastructure/controllers/AttendanceController";
 import { NovedadController } from "./src/server/infrastructure/controllers/NovedadController";
 
-// Get __dirname equivalent in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// We can use process.cwd() for resolving the dist directory instead of __dirname
+// to avoid ESM/CJS compatibility issues on Vercel.
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -127,10 +126,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 async function startServer() {
-  const PORT = process.env.PORT || 3000;
+  const PORT = 3000;
 
   // --- Vite Middleware ---
   if (process.env.NODE_ENV !== "production" && process.env.VERCEL !== "1") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
