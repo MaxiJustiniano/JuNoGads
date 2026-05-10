@@ -107,58 +107,10 @@ export const useAppStore = create<AppState>((set) => ({
     role: Role.ADMIN,
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin'
   },
-  empleados: [
-    {
-      id: 'e1',
-      legajo: '1001',
-      nombre: 'Juan',
-      apellido: 'Pérez',
-      dni: '30.123.456',
-      cuil: '20-30123456-7',
-      fechaIngreso: '2022-01-15',
-      categoria: 'Administrativo',
-      tipoJornada: 'FULL_TIME',
-      estado: 'ACTIVO',
-      horarioId: 'h1'
-    },
-    {
-      id: 'e2',
-      legajo: '1002',
-      nombre: 'María',
-      apellido: 'González',
-      dni: '32.987.654',
-      cuil: '27-32987654-1',
-      fechaIngreso: '2023-03-10',
-      categoria: 'Operario',
-      tipoJornada: 'FULL_TIME',
-      estado: 'ACTIVO',
-      horarioId: 'h1'
-    }
-  ],
-  horarios: [
-    {
-      id: 'h1',
-      nombre: 'Normal 09-18',
-      horaEntrada: '09:00',
-      horaSalida: '18:00',
-      toleranciaEntrada: 15,
-      toleranciaSalida: 0,
-      diasLaborales: [1, 2, 3, 4, 5]
-    }
-  ],
+  empleados: [],
+  horarios: [],
   fichadas: [],
-  novedades: [
-    {
-      id: 'n1',
-      empleadoId: 'e1',
-      tipo: NovedadType.TARDANZA,
-      fechaDesde: '2024-05-08',
-      cantidad: 0.5,
-      estado: NovedadStatus.PENDIENTE,
-      esAutomatica: true,
-      createdAt: '2024-05-08T09:35:00Z'
-    }
-  ],
+  novedades: [],
   setEmployees: (empleados: Empleado[]) => set({ empleados }),
   setCurrentUser: (currentUser: User | null) => set({ currentUser }),
   fetchEmployees: async () => {
@@ -183,7 +135,7 @@ export const useAppStore = create<AppState>((set) => ({
         estado: 'ACTIVO',
         categoria: 'Administrativo', 
         tipoJornada: 'FULL_TIME',
-        horarioId: 'h1' 
+        horarioId: '81109015-ab23-4f9c-ad98-b80c352bbded'
       });
       console.log('Respuesta de creación:', response.data);
     } catch (error: any) {
