@@ -11,6 +11,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import api from '../lib/api';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
