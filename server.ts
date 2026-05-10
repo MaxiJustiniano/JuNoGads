@@ -36,6 +36,7 @@ async function startServer() {
   // --- API Routes (In a real app, these would be in separate files) ---
   
   app.get("/api/health", (req, res) => {
+    // Health check endpoint for deployment verification
     res.json({ status: "ok", message: "PymeTime API is running" });
   });
 

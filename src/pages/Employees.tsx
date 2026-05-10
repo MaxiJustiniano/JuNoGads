@@ -29,7 +29,10 @@ export default function Employees() {
     dni: '',
     legajo: '',
     cuil: '',
-    fechaIngreso: format(new Date(), 'yyyy-MM-dd')
+    fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
+    categoria: '',
+    tipoJornada: 'COMPLETA',
+    horarioId: 0
   });
 
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function Employees() {
     setIsLoading(true);
     setError(null);
     try {
-      await createEmployee(formData);
+      await createEmployee(formData as any);
       setIsModalOpen(false);
       fetchEmployees();
       setFormData({
@@ -49,7 +52,10 @@ export default function Employees() {
         dni: '',
         legajo: '',
         cuil: '',
-        fechaIngreso: format(new Date(), 'yyyy-MM-dd')
+        fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
+        categoria: '',
+        tipoJornada: 'COMPLETA',
+        horarioId: 0
       });
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Error al crear empleado');
