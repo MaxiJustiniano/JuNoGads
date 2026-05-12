@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
+import Schedules from './pages/Schedules';
 import Attendance from './pages/Attendance';
 import Novedades from './pages/Novedades';
 
@@ -47,7 +48,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/empleados" element={<Employees />} />
-                <Route path="/horarios" element={<div className="p-8">Módulo de Horarios (V1)</div>} />
+                <Route path="/horarios" element={<Schedules />} />
                 <Route path="/fichadas" element={<Attendance />} />
                 <Route path="/novedades" element={<Novedades />} />
                 <Route path="/conciliacion" element={<div className="p-8">Conciliación (V6)</div>} />

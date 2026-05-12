@@ -109,11 +109,13 @@ app.post("/api/empleados", employeeController.create);
 app.put("/api/empleados/:id", employeeController.update);
 app.delete("/api/empleados/:id", employeeController.delete);
 
-app.get("/api/horarios", async (req, res) => {
-  const { data, error } = await supabase.from('horarios').select('*');
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
-});
+import { ScheduleController } from './src/server/infrastructure/controllers/ScheduleController.js';
+const scheduleController = new ScheduleController();
+app.get("/api/horarios", scheduleController.getAll);
+app.get("/api/horarios/:id", scheduleController.getById);
+app.post("/api/horarios", scheduleController.create);
+app.put("/api/horarios/:id", scheduleController.update);
+app.delete("/api/horarios/:id", scheduleController.delete);
 
 const attendanceController = new AttendanceController();
 app.post("/api/fichadas", attendanceController.register);

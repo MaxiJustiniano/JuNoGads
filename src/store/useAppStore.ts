@@ -61,6 +61,10 @@ export interface Horario {
   toleranciaEntrada: number; // minutos
   toleranciaSalida: number; // minutos
   diasLaborales: number[]; // 0-6
+  tipoJornada: 'TURNO_FIJO' | 'TURNO_ROTATIVO' | 'FLEXIBLE' | 'REDUCIDA';
+  tiempoMinimoDescanso: number; // minutos
+  umbralHorasExtra: number; // horas
+  estado: 'ACTIVO' | 'INACTIVO';
 }
 
 export interface Fichada {
@@ -99,6 +103,9 @@ interface AppState {
   updateEmployee: (id: string, data: Partial<Empleado>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   fetchHorarios: () => Promise<void>;
+  createSchedule: (data: Omit<Horario, 'id'>) => Promise<void>;
+  updateSchedule: (id: string, data: Partial<Horario>) => Promise<void>;
+  deleteSchedule: (id: string) => Promise<void>;
   fetchFichadas: () => Promise<void>;
   fetchNovedades: () => Promise<void>;
 }
@@ -182,6 +189,35 @@ export const useAppStore = create<AppState>((set) => ({
       set({ horarios: response.data });
     } catch (error) {
       console.error('Error fetching schedules:', error);
+    }
+  },
+  createSchedule: async (data) => {
+    try {
+      const response = await api.post('/horarios', data);
+      set({ horarios: [...useAppStore.getState().horarios, response.data] });
+    } catch (error: any) {
+      console.error('Error in createSchedule:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+  updateSchedule: async (id, data) => {
+    try {
+      const response = await api.put(`/horarios/${id}`, data);
+      const horarios = useAppStore.getState().horarios;
+      set({ horarios: horarios.map(h => h.id === id ? response.data : h) });
+    } catch (error: any) {
+      console.error('Error in updateSchedule:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+  deleteSchedule: async (id) => {
+    try {
+      await api.delete(`/horarios/${id}`);
+      const horarios = useAppStore.getState().horarios;
+      set({ horarios: horarios.map(h => h.id === id ? { ...h, estado: 'INACTIVO' } : h) });
+    } catch (error: any) {
+      console.error('Error in deleteSchedule:', error.response?.data || error.message);
+      throw error;
     }
   },
   fetchFichadas: async () => {
