@@ -347,8 +347,14 @@ export default function Attendance() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {interpretaciones.map((inv) => {
-                  const fichadaTime = format(new Date(inv.fichada?.timestamp), 'HH:mm');
-                  const tType = inv.fichada?.tipo;
+                  let fichadaTime = '--:--';
+                  if (inv.fichada?.timestamp) {
+                    try {
+                      fichadaTime = format(new Date(inv.fichada.timestamp), 'HH:mm');
+                    } catch (e) {}
+                  }
+                  
+                  const tType = inv.fichada?.tipo || 'DESCONOCIDO';
                   return (
                   <tr key={inv.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-4">

@@ -9,19 +9,25 @@ export class MotorDeReglas {
    * @param empleado El empleado con su horario asociado
    */
   public evaluar(fichada: any, empleado: any) {
-    if (!empleado.horario) {
-      return this.crearResultadoBase(fichada, 'HORARIO_NO_ASIGNADO', 'Empleado sin horario asignado');
+    if (!empleado.horario || (Array.isArray(empleado.horario) && empleado.horario.length === 0)) {
+      return this.crearResultadoBase(fichada, empleado, 'HORARIO_NO_ASIGNADO', 'Empleado sin horario asignado');
     }
 
-    const { horario } = empleado;
+    const horario = Array.isArray(empleado.horario) ? empleado.horario[0] : empleado.horario;
     const fichadaDate = new Date(fichada.timestamp);
     const fechaStr = format(fichadaDate, 'yyyy-MM-dd');
     
     // Obtener día de la semana (0 = DOMINGO, 1 = LUNES, ... 6 = SABADO)
     const diaSemana = fichadaDate.getDay();
     
-    // Verificar si es día laboral
-    const diasLaborales = horario.diasLaborales || [];
+    // Desempaquetar configuración del horario (por compatibilidad con la base de datos)
+    let diasLaborales = [];
+    if (Array.isArray(horario.diasLaborales)) {
+      diasLaborales = horario.diasLaborales;
+    } else if (horario.diasLaborales && Array.isArray(horario.diasLaborales.dias)) {
+      diasLaborales = horario.diasLaborales.dias;
+    }
+
     const esDiaLaboral = diasLaborales.includes(diaSemana);
     
     if (!esDiaLaboral) {
@@ -40,6 +46,10 @@ export class MotorDeReglas {
         minutosDescansoExcedido: 0,
         estado: 'CALCULADO' // o 'REQUIERE_REVISION'
       };
+    }
+
+    if (!horario.horaEntrada || !horario.horaSalida) {
+      return this.crearResultadoBase(fichada, empleado, 'HORARIO_INVALIDO', 'El horario asignado no tiene hora de entrada o salida');
     }
 
     // Lógica para días laborales
@@ -96,10 +106,10 @@ export class MotorDeReglas {
     };
   }
 
-  private crearResultadoBase(fichada: any, estado: string, obs: string) {
+  private crearResultadoBase(fichada: any, empleado: any, estado: string, obs: string) {
     return {
       fichadaId: fichada.id,
-      empleadoId: fichada.empleadoId,
+      empleadoId: empleado ? empleado.id : fichada.empleadoId,
       fecha: format(new Date(fichada.timestamp), 'yyyy-MM-dd'),
       resultado: { observaciones: obs },
       minutosTardanza: 0,
