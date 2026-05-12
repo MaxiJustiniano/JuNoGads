@@ -53,4 +53,32 @@ export class EmployeeController {
       res.status(400).json({ error: error.message });
     }
   };
+
+  downloadTemplate = async (req: Request, res: Response) => {
+    try {
+      const buffer = await this.service.generateTemplate();
+      res.setHeader('Content-Disposition', 'attachment; filename="plantilla_empleados.xlsx"');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.send(buffer);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+
+  importExcel = async (req: Request, res: Response) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ status: 'error', message: 'No se subió ningún archivo' });
+      
+      const result = await this.service.processImport(file.buffer);
+      
+      if (result.errors && result.errors.length > 0) {
+        return res.status(400).json({ status: 'error', errors: result.errors });
+      }
+
+      res.json({ status: 'success', message: `Se importaron ${result.importedCount} empleados correctamente.` });
+    } catch (error: any) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  };
 }

@@ -134,50 +134,35 @@ export default function Employees() {
     return matchesSearch && matchesStatus;
   }) : [];
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws);
-        
-        let imported = 0;
-        for (const row of data as any[]) {
-          // Minimal mapping logic
-          const newEmp = {
-            nombre: row.Nombre || row.nombre || '',
-            apellido: row.Apellido || row.apellido || '',
-            dni: String(row.DNI || row.dni || ''),
-            legajo: String(row.Legajo || row.legajo || ''),
-            cuil: String(row.CUIL || row.cuil || ''),
-            fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
-            categoria: row.Categoria || row.categoria || 'Administrativo',
-            tipoJornada: row.TipoJornada || row.tipoJornada || 'FULL_TIME',
-            estado: 'ACTIVO',
-            horarioId: horarios.length > 0 ? horarios[0].id : null
-          };
-          if (newEmp.nombre && newEmp.dni) {
-            await createEmployee(newEmp as any);
-            imported++;
-          }
-        }
-        alert(`Se importaron ${imported} empleados correctamente.`);
-        fetchEmployees();
-      } catch (err: any) {
-        alert('Error al importar archivo: ' + err.message);
-      } finally {
-        setIsImporting(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await api.post('/empleados/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      alert(response.data.message);
+      fetchEmployees();
+    } catch (err: any) {
+      const data = err.response?.data;
+      if (data && data.errors && data.errors.length > 0) {
+        alert('Errores al importar:\n' + data.errors.join('\n'));
+      } else {
+        alert('Error al importar archivo: ' + (data?.message || err.message));
       }
-    };
-    reader.readAsBinaryString(file);
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    window.open(`${api.defaults.baseURL}/empleados/template`, '_blank');
   };
 
   return (
@@ -188,6 +173,13 @@ export default function Employees() {
           <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest">NexoLaboral • Personal Activo</p>
         </div>
         <div className="flex gap-2">
+          <button 
+            onClick={handleDownloadTemplate}
+            className="bg-slate-100 text-slate-600 border border-slate-200 px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-slate-200 transition-all shadow-sm active:scale-95"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Descargar Plantilla
+          </button>
           <input 
             type="file" 
             accept=".xlsx, .xls, .csv" 
@@ -208,7 +200,7 @@ export default function Employees() {
             className="bg-indigo-600 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm active:scale-95"
           >
             <UserPlus className="w-4 h-4" />
-            Registrar Empleado
+            Registrar
           </button>
         </div>
       </header>

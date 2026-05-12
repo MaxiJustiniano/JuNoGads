@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { EmployeeController } from './src/server/infrastructure/controllers/EmployeeController.js';
 import { AttendanceController } from './src/server/infrastructure/controllers/AttendanceController.js';
 import { NovedadController } from './src/server/infrastructure/controllers/NovedadController.js';
+import multer from 'multer';
 
 // We can use process.cwd() for resolving the dist directory instead of __dirname
 // to avoid ESM/CJS compatibility issues on Vercel.
@@ -16,6 +17,7 @@ import bcrypt from 'bcryptjs';
 import { supabase } from './src/server/infrastructure/supabase.js';
 
 export const app = express();
+const upload = multer({ storage: multer.memoryStorage() });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'pymetime_super_secret_key_123';
 
@@ -100,6 +102,8 @@ app.post("/api/login", async (req, res) => {
 
 const employeeController = new EmployeeController();
 app.get("/api/empleados", employeeController.getAll);
+app.get("/api/empleados/template", employeeController.downloadTemplate);
+app.post("/api/empleados/import", upload.single('file'), employeeController.importExcel);
 app.get("/api/empleados/:id", employeeController.getById);
 app.post("/api/empleados", employeeController.create);
 app.put("/api/empleados/:id", employeeController.update);
