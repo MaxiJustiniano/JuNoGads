@@ -132,7 +132,7 @@ export default function Attendance() {
               <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold">
                 <Clock className="w-4 h-4" />
               </div>
-              <h3 className="font-bold text-slate-700">Registrar Marcación</h3>
+              <h3 className="font-bold text-slate-700">Registrar Fichada</h3>
             </div>
 
             <div className="space-y-4">
