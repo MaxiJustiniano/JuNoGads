@@ -50,7 +50,18 @@ CREATE TABLE novedades (
   trazabilidad jsonb
 );
 
--- Insertar un horario por defecto (opcional, para que los empleados puedan ser asignados a uno al crearse)
+CREATE TABLE interpretaciones (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "fichadaId" uuid REFERENCES fichadas(id),
+  "empleadoId" uuid REFERENCES empleados(id),
+  fecha text NOT NULL,
+  resultado jsonb NOT NULL,
+  "minutosTardanza" int DEFAULT 0,
+  "minutosExtra" int DEFAULT 0,
+  "minutosDescansoExcedido" int DEFAULT 0,
+  estado text DEFAULT 'CALCULADO',
+  "createdAt" text DEFAULT round((EXTRACT(epoch FROM now()) * 1000))::text
+);
 INSERT INTO horarios (id, nombre, "horaEntrada", "horaSalida", "toleranciaEntrada", "toleranciaSalida", "diasLaborales") 
 VALUES (
     '81109015-ab23-4f9c-ad98-b80c352bbded', 

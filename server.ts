@@ -120,6 +120,7 @@ app.delete("/api/horarios/:id", scheduleController.delete);
 const attendanceController = new AttendanceController();
 app.post("/api/fichadas", attendanceController.register);
 app.get("/api/fichadas/recientes", attendanceController.getRecent);
+app.get("/api/fichadas/interpretaciones", attendanceController.getInterpretaciones);
 
 const novedadController = new NovedadController();
 app.get("/api/novedades", novedadController.getAll);
