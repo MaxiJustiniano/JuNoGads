@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 export default function Novedades() {
   const [novedades, setNovedades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'TODAS' | 'PENDIENTES' | 'APROBADAS'>('TODAS');
 
   const fetchNovedades = async () => {
     try {
@@ -73,9 +74,24 @@ export default function Novedades() {
 
       <div className="flex gap-4 items-center">
         <div className="flex bg-white border border-slate-200 rounded-md p-1 shadow-sm">
-          <button className="px-4 py-1.5 text-[10px] font-bold bg-indigo-600 text-white rounded transition-all uppercase tracking-wider">Todas</button>
-          <button className="px-4 py-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-600 rounded transition-all uppercase tracking-wider">Pendientes</button>
-          <button className="px-4 py-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-600 rounded transition-all uppercase tracking-wider">Aprobadas</button>
+          <button 
+            onClick={() => setFilter('TODAS')}
+            className={`px-4 py-1.5 text-[10px] font-bold rounded transition-all uppercase tracking-wider ${filter === 'TODAS' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-indigo-600'}`}
+          >
+            Todas
+          </button>
+          <button 
+            onClick={() => setFilter('PENDIENTES')}
+            className={`px-4 py-1.5 text-[10px] font-bold rounded transition-all uppercase tracking-wider ${filter === 'PENDIENTES' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-indigo-600'}`}
+          >
+            Pendientes
+          </button>
+          <button 
+            onClick={() => setFilter('APROBADAS')}
+            className={`px-4 py-1.5 text-[10px] font-bold rounded transition-all uppercase tracking-wider ${filter === 'APROBADAS' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-indigo-600'}`}
+          >
+            Aprobadas
+          </button>
         </div>
       </div>
 
@@ -90,7 +106,13 @@ export default function Novedades() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {novedades.map((nov) => (
+            {novedades
+              .filter(nov => 
+                filter === 'TODAS' || 
+                (filter === 'PENDIENTES' && nov.estado === 'PENDIENTE') || 
+                (filter === 'APROBADAS' && nov.estado === 'APROBADA')
+              )
+              .map((nov) => (
               <tr key={nov.id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs uppercase">
@@ -105,7 +127,7 @@ export default function Novedades() {
                 </td>
                 <td className="px-6 py-4">
                   <div className="font-mono text-slate-700">{format(new Date(nov.fechaDesde), 'dd/MM/yyyy')}</div>
-                  <div className="text-[10px] text-slate-400 uppercase">{nov.cantidad} {nov.tipo.includes('HORA') ? 'Horas' : 'Día(s)'}</div>
+                  <div className="text-[10px] text-slate-400 uppercase">{nov.cantidad} {nov.tipo.includes('HORA') ? 'Horas' : nov.tipo.includes('ANTIC') || nov.tipo.includes('TARDANZA') ? 'Minuto(s)' : 'Día(s)'}</div>
                 </td>
                 <td className="px-6 py-4 text-center">
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${getStatusBadge(nov.estado)}`}>
