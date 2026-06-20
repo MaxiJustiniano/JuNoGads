@@ -24,6 +24,20 @@ export class AttendanceRepository {
     return data;
   }
 
+  async findByEmployeeAndDateRange(empleadoId: string, fromDate: string, toDate: string) {
+    const { data, error } = await supabase
+      .from('fichadas')
+      .select('*')
+      .eq('empleadoId', empleadoId)
+      .gte('timestamp', new Date(fromDate).toISOString())
+      .lte('timestamp', new Date(toDate).toISOString())
+      .order('timestamp', { ascending: true });
+      
+    if (error) throw error;
+    
+    return data;
+  }
+
   async getRecent(limit = 20) {
     const { data, error } = await supabase
       .from('fichadas')

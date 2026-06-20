@@ -121,6 +121,7 @@ const attendanceController = new AttendanceController();
 app.post("/api/fichadas", attendanceController.register);
 app.get("/api/fichadas/recientes", attendanceController.getRecent);
 app.get("/api/fichadas/interpretaciones", attendanceController.getInterpretaciones);
+app.post("/api/fichadas/reprocess", attendanceController.reprocess);
 
 const novedadController = new NovedadController();
 app.get("/api/novedades", novedadController.getAll);

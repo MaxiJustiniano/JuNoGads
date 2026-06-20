@@ -21,4 +21,15 @@ export class InterpretacionRepository {
     if (error) throw error;
     return data;
   }
+
+  async deleteByEmployeeAndDateRange(empleadoId: string, fromDate: string, toDate: string) {
+    const { error } = await supabase
+      .from('interpretaciones')
+      .delete()
+      .eq('empleadoId', empleadoId)
+      .gte('fecha', fromDate)
+      .lte('fecha', toDate);
+      
+    if (error) throw error;
+  }
 }

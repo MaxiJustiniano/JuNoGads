@@ -45,4 +45,19 @@ export class AttendanceController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  reprocess = async (req: Request, res: Response) => {
+    try {
+      const { empleadoId, fromDate, toDate } = req.body;
+      if (!empleadoId || !fromDate || !toDate) {
+        return res.status(400).json({ error: "Faltan parámetros: empleadoId, fromDate, toDate" });
+      }
+      const result = await this.service.reprocesarPeriodo(empleadoId, fromDate, toDate);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
+
+
