@@ -1,0 +1,30 @@
+{
+  "empleados": [],
+  "horarios": [
+    {
+      "id": "8004024d-6a46-4ae3-97d9-a171053a4803",
+      "nombre": "Test",
+      "horaEntrada": "09:00",
+      "horaSalida": "18:00",
+      "toleranciaEntrada": 0,
+      "toleranciaSalida": 0,
+      "diasLaborales": {
+        "dias": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "tipoJornada": "TURNO_FIJO",
+        "tiempoMinimoDescanso": 0,
+        "umbralHorasExtra": 8,
+        "estado": "ACTIVO"
+      },
+      "createdAt": "2026-06-20T22:42:44.703Z"
+    }
+  ],
+  "fichadas": [],
+  "interpretaciones": [],
+  "novedades": []
+}

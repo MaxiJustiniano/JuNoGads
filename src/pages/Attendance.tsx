@@ -35,18 +35,20 @@ export default function Attendance() {
   const fetchRecent = async () => {
     try {
       const res = await api.get('/fichadas/recientes');
-      setFichadas(res.data);
+      setFichadas(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error(error);
+      setFichadas([]);
     }
   };
 
   const fetchInterpretaciones = async () => {
     try {
       const res = await api.get(`/fichadas/interpretaciones?fecha=${fechaInterpretacion}`);
-      setInterpretaciones(res.data);
+      setInterpretaciones(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error(error);
+      setInterpretaciones([]);
     }
   };
 

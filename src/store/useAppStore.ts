@@ -186,9 +186,10 @@ export const useAppStore = create<AppState>((set) => ({
   fetchHorarios: async () => {
     try {
       const response = await api.get('/horarios');
-      set({ horarios: response.data });
+      set({ horarios: Array.isArray(response.data) ? response.data : [] });
     } catch (error) {
       console.error('Error fetching schedules:', error);
+      set({ horarios: [] });
     }
   },
   createSchedule: async (data) => {
