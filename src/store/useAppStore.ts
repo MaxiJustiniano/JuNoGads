@@ -141,13 +141,13 @@ export const useAppStore = create<AppState>((set) => ({
   createEmployee: async (data) => {
     try {
       console.log('Enviando datos de empleado:', data);
-      const response = await api.post('/empleados', {
+      const payload = {
         ...data,
-        estado: 'ACTIVO',
-        categoria: 'Administrativo', 
-        tipoJornada: 'FULL_TIME',
-        horarioId: '81109015-ab23-4f9c-ad98-b80c352bbded'
-      });
+        estado: data.estado || 'ACTIVO',
+        categoria: data.categoria || 'Administrativo', 
+        tipoJornada: data.tipoJornada || 'FULL_TIME'
+      };
+      const response = await api.post('/empleados', payload);
       console.log('Respuesta de creación:', response.data);
     } catch (error: any) {
       if (error.response) {

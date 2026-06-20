@@ -33,11 +33,18 @@ export class EmployeeService {
       }
     }
     
+    if (!employeeData.horarioId) {
+      employeeData.horarioId = null;
+    }
+
     console.log('Creando empleado con datos:', employeeData);
     return this.repository.create(employeeData);
   }
 
   async updateEmployee(id: string, employeeData: any) {
+    if (employeeData.horarioId === '') {
+      employeeData.horarioId = null;
+    }
     return this.repository.update(id, employeeData);
   }
 
