@@ -143,7 +143,7 @@ export const useAppStore = create<AppState>((set) => ({
       console.log('Enviando datos de empleado:', data);
       const payload = {
         ...data,
-        estado: data.estado || 'ACTIVO',
+        estado: (data as any).estado || 'ACTIVO',
         categoria: data.categoria || 'Administrativo', 
         tipoJornada: data.tipoJornada || 'FULL_TIME'
       };
