@@ -1,4 +1,7 @@
-import { differenceInMinutes, format, isSameDay, startOfDay, addMinutes } from 'date-fns';
+import { differenceInMinutes, format, isSameDay, startOfDay } from 'date-fns';
+import { toZonedTime, format as formatTz, fromZonedTime } from 'date-fns-tz';
+
+const TZ = 'America/Argentina/Buenos_Aires';
 
 export interface Fichada {
   id: string;
@@ -13,8 +16,11 @@ export class RulesEngine {
    * Procesa un día completo de fichadas para un empleado
    * Limpia dobles fichadas, calcula tiempos y devuelve interpretación + Novedades a crear
    */
-  public evaluarDia(fecha: Date, empleado: any, fichadasDelDia: Fichada[]) {
-    const fechaStr = format(fecha, 'yyyy-MM-dd');
+  public evaluarDia(fechaUTC: Date, empleado: any, fichadasDelDia: Fichada[]) {
+    // La fecha proporcionada podría estar en UTC o local del server. 
+    // Lo ideal es tener el día en la zona horaria objetivo
+    const fechaLocal = toZonedTime(fechaUTC, TZ);
+    const fechaStr = formatTz(fechaLocal, 'yyyy-MM-dd', { timeZone: TZ });
     
     if (!empleado.horarioBase && (!empleado.horario || typeof empleado.horario !== 'object')) {
       return this.crearFallback(empleado, fechaStr, 'HORARIO_NO_ASIGNADO', 'Empleado sin horario');
@@ -29,7 +35,6 @@ export class RulesEngine {
     // Ordenamos cronológicamente
     let sorted = [...fichadasDelDia].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     
-    // Filtrar duplicados rápidos (ej: dos ENTRADA con menos de 5 mins de diferencia)
     const fichadasLimpias: Fichada[] = [];
     for (const f of sorted) {
       if (fichadasLimpias.length === 0) {
@@ -38,7 +43,6 @@ export class RulesEngine {
         const last = fichadasLimpias[fichadasLimpias.length - 1];
         const minDiff = differenceInMinutes(new Date(f.timestamp), new Date(last.timestamp));
         if (f.tipo === last.tipo && minDiff < 5) {
-          // Es un rebote / doble fichada intencional rápida -> Lo ignoramos
           continue;
         }
         fichadasLimpias.push(f);
@@ -46,12 +50,11 @@ export class RulesEngine {
     }
 
     const entrada = fichadasLimpias.find(f => f.tipo === 'ENTRADA');
-    // Tomamos la última salida
     const salidas = fichadasLimpias.filter(f => f.tipo === 'SALIDA');
     const salida = salidas.length > 0 ? salidas[salidas.length - 1] : undefined;
 
     // 2. Determinar si es día laboral
-    const diaSemana = fecha.getDay();
+    const diaSemana = fechaLocal.getDay();
     let diasLaborales = [];
     if (Array.isArray(horario.diasLaborales)) {
       diasLaborales = horario.diasLaborales;
@@ -69,7 +72,7 @@ export class RulesEngine {
             empleadoId: empleado.id,
             fichadaId: entrada.id,
             fecha: fechaStr,
-            resultado: { observaciones: 'Fichada en día no laboral' },
+            resultado: { observaciones: 'Fichada en día no laboral', esDiaLaboral: false },
             minutosTardanza: 0,
             minutosExtra: extra,
             minutosDescansoExcedido: 0,
@@ -91,12 +94,14 @@ export class RulesEngine {
     }
 
     // Es día laboral
-    const resultado: any = {};
+    const resultado: any = { esDiaLaboral: true };
     const novedades: any[] = [];
     
     if (!entrada) {
       // Ausencia! (asumiendo que ya terminó el día o estamos reprocesando un día pasado)
-      const isPastDay = new Date(fechaStr).getTime() < startOfDay(new Date()).getTime();
+      const ahoraNeto = toZonedTime(new Date(), TZ);
+      const isPastDay = fechaLocal.getTime() < startOfDay(ahoraNeto).getTime();
+
       if (isPastDay) {
         resultado.observaciones = 'Ausencia detectada';
         novedades.push({
@@ -123,20 +128,20 @@ export class RulesEngine {
       };
     }
 
-    // Entrada teórica
-    const [hEnt, mEnt] = horario.horaEntrada.split(':').map(Number);
-    const expectedEntrada = new Date(fecha);
-    expectedEntrada.setHours(hEnt, mEnt, 0, 0);
+    // Entrada y Salida teóricas en la zona horaria objetivo
+    const [hEnt, mEnt] = horario.horaEntrada.split(':');
+    const expectedEntradaDate = fromZonedTime(`${fechaStr}T${hEnt}:${mEnt}:00`, TZ);
 
-    const [hSal, mSal] = horario.horaSalida.split(':').map(Number);
-    const expectedSalida = new Date(fecha);
-    expectedSalida.setHours(hSal, mSal, 0, 0);
+    const [hSal, mSal] = horario.horaSalida.split(':');
+    const expectedSalidaDate = fromZonedTime(`${fechaStr}T${hSal}:${mSal}:00`, TZ);
+
+    const entradaRealDate = new Date(entrada.timestamp);
 
     let minutosTardanza = 0;
     let minutosExtra = 0;
     let minutosAnticipada = 0;
 
-    const diffEntrada = differenceInMinutes(new Date(entrada.timestamp), expectedEntrada);
+    const diffEntrada = differenceInMinutes(entradaRealDate, expectedEntradaDate);
     if (diffEntrada > (horario.toleranciaEntrada || 0)) {
       minutosTardanza = diffEntrada;
       resultado.tardanza = true;
@@ -150,29 +155,21 @@ export class RulesEngine {
         esAutomatica: true,
         estado: 'PENDIENTE'
       });
+    } else if (diffEntrada < 0) {
+        // Llegada anterior a la teórica -> suma a minutos extra
+        minutosExtra += Math.abs(diffEntrada);
     }
 
     if (salida) {
-      const diffSalida = differenceInMinutes(new Date(salida.timestamp), expectedSalida);
+      const salidaRealDate = new Date(salida.timestamp);
+      const diffSalida = differenceInMinutes(salidaRealDate, expectedSalidaDate);
+      
       if (diffSalida > (horario.toleranciaSalida || 0)) {
-        minutosExtra = diffSalida;
-        resultado.horasExtra = true;
-        // Solo generar Novedad si cumple unbral de horas extra (e.g. > 30 mins)
-        if (minutosExtra > 30) {
-          novedades.push({
-            empleadoId: empleado.id,
-            tipo: 'HORAS_EXTRA',
-            fechaDesde: fechaStr,
-            fechaHasta: fechaStr,
-            cantidad: Math.floor(minutosExtra / 60), // En horas 
-            observaciones: `Horas extra: ${minutosExtra} mins`,
-            esAutomatica: true,
-            estado: 'PENDIENTE'
-          });
-        }
+        minutosExtra += diffSalida;
       } else if (diffSalida < 0) {
         minutosAnticipada = Math.abs(diffSalida);
         resultado.salidaAnticipada = true;
+        resultado.minutosSalidaAnticipada = minutosAnticipada;
         if (minutosAnticipada > 15) {
             novedades.push({
               empleadoId: empleado.id,
@@ -184,6 +181,23 @@ export class RulesEngine {
               esAutomatica: true,
               estado: 'PENDIENTE'
             });
+        }
+      }
+
+      if (minutosExtra > 0) {
+        resultado.horasExtra = true;
+        // Solo generar Novedad si cumple umbral de horas extra (e.g. > 30 mins)
+        if (minutosExtra > 30) {
+          novedades.push({
+            empleadoId: empleado.id,
+            tipo: 'HORAS_EXTRA',
+            fechaDesde: fechaStr,
+            fechaHasta: fechaStr,
+            cantidad: parseFloat((minutosExtra / 60).toFixed(2)), // En horas con dos decimales
+            observaciones: `Horas extra: ${minutosExtra} mins (Llegada/Salida combinada)`,
+            esAutomatica: true,
+            estado: 'PENDIENTE'
+          });
         }
       }
     } else {
@@ -211,7 +225,7 @@ export class RulesEngine {
         empleadoId: empleado.id,
         ...(fichadaId ? { fichadaId } : {}),
         fecha: fechaStr,
-        resultado: { observaciones: obs },
+        resultado: { observaciones: obs, esDiaLaboral: false },
         minutosTardanza: 0,
         minutosExtra: 0,
         minutosDescansoExcedido: 0,

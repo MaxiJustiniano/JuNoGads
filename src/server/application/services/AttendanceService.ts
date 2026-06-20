@@ -3,7 +3,10 @@ import { EmployeeRepository } from '../../infrastructure/repositories/EmployeeRe
 import { InterpretacionRepository } from '../../infrastructure/repositories/InterpretacionRepository.js';
 import { NovedadRepository } from '../../infrastructure/repositories/NovedadRepository.js';
 import { RulesEngine } from './RulesEngine.js';
-import { isSameDay, addDays, format, parseISO } from 'date-fns';
+import { addDays } from 'date-fns';
+import { format as formatTz, toZonedTime } from 'date-fns-tz';
+
+const TZ = 'America/Argentina/Buenos_Aires';
 
 export class AttendanceService {
   private repository: AttendanceRepository;
@@ -26,8 +29,8 @@ export class AttendanceService {
 
     // 2. Reprocesar el día de esta fichada para generar la interpretación agrupada.
     if (data.empleadoId && data.timestamp) {
-        const fecha = new Date(data.timestamp);
-        const dayStr = format(fecha, 'yyyy-MM-dd');
+        const fechaLocal = toZonedTime(new Date(data.timestamp), TZ);
+        const dayStr = formatTz(fechaLocal, 'yyyy-MM-dd', { timeZone: TZ });
         // Reprocesar de forma asincrónica o sincrónica, usamos la funcion de reprocesamiento para 1 dia
         await this.reprocesarPeriodo(data.empleadoId, dayStr, dayStr);
     }
@@ -56,22 +59,27 @@ export class AttendanceService {
     await this.interpretacionRepo.deleteByEmployeeAndDateRange(empleadoId, fromDateStr, toDateStr);
     await this.novedadRepo.deleteByEmployeeAndDateRange(empleadoId, fromDateStr, toDateStr);
 
-    const fromDate = parseISO(fromDateStr);
-    const toDate = parseISO(toDateStr);
+    // Para evitar problemas de offset con parseISO, podemos crear las fechas de busqueda extremas
+    // ej fromDateStr="2026-06-20", busquemos desde las 00:00 local hasta las 23:59 del final
+    const timeFrom = `${fromDateStr}T00:00:00.000-03:00`; // TZ Offset de AR (-03:00)
+    const timeTo = `${toDateStr}T23:59:59.999-03:00`;
     
     // Obtenemos todas las fichadas en el periodo
-    // Aseguramos cubrir el día inicial desde la 00:00 y hasta el final de toDate
-    const timeFrom = format(fromDate, "yyyy-MM-dd'T'00:00:00.000XXX");
-    const timeTo = format(toDate, "yyyy-MM-dd'T'23:59:59.999XXX");
     const fichadasRango = await this.repository.findByEmployeeAndDateRange(empleadoId, timeFrom, timeTo);
 
     // Iterar por día
-    let actualDate = new Date(timeFrom);
-    const endDate = new Date(timeTo);
+    let actualDateStr = fromDateStr;
+    let actualDate = new Date(`${actualDateStr}T12:00:00Z`); // Mediodía para evitar cruces
+    const endDate = new Date(`${toDateStr}T12:00:00Z`);
 
     while (actualDate <= endDate) {
-      // Filtrar fichadas exactas de 'actualDate'
-      const fichadasDia = fichadasRango.filter(f => isSameDay(new Date(f.timestamp), actualDate));
+      const currentDayStr = formatTz(toZonedTime(actualDate, TZ), 'yyyy-MM-dd', { timeZone: TZ });
+      
+      // Filtrar fichadas exactas de 'currentDayStr'
+      const fichadasDia = fichadasRango.filter(f => {
+         const localF = toZonedTime(new Date(f.timestamp), TZ);
+         return formatTz(localF, 'yyyy-MM-dd', { timeZone: TZ }) === currentDayStr;
+      });
       
       const { interpretacion, novedades } = this.motorDeReglas.evaluarDia(actualDate, empleado, fichadasDia);
       
