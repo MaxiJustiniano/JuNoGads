@@ -155,7 +155,7 @@ export default function CierresMensuales() {
                   <td className="px-6 py-4 text-right">
                     <button
                       onClick={() => downloadExcel(c.id, c.periodo)}
-                      className="px-3 py-1 flex items-center justify-end w-full gap-1.5 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
+                      className="px-3 py-1 inline-flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
                     >
                       <Download className="w-3 h-3" /> Reporte Excel
                     </button>
