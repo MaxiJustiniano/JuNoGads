@@ -1,0 +1,7 @@
+{
+  "id": 1,
+  "toleranciaEntradaMinutos": 15,
+  "toleranciaSalidaMinutos": 10,
+  "umbralHorasExtraMinutos": 45,
+  "tiempoMinimoDescansoMinutos": 30
+}

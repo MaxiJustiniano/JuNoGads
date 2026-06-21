@@ -85,14 +85,23 @@ export class AttendanceService {
     );
 
     // Fetch global config
+    let globalConfig = null;
     const { data: globalConfigData, error: errConfig } = await supabase
       .from("configuracion_global")
       .select("*")
       .eq("id", 1)
       .single();
 
-    const globalConfig =
-      !errConfig && globalConfigData ? globalConfigData : null;
+    if (!errConfig && globalConfigData) {
+      globalConfig = globalConfigData;
+    } else {
+      const fs = await import("fs");
+      const path = await import("path");
+      const CONFIG_FILE = path.join(process.cwd(), "configuracion.json");
+      if (fs.existsSync(CONFIG_FILE)) {
+        globalConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+      }
+    }
 
     // Iterar por día
     let actualDateStr = fromDateStr;
