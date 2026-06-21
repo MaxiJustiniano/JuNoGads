@@ -9,6 +9,7 @@ import Attendance from "./pages/Attendance";
 import Novedades from "./pages/Novedades";
 import Conciliacion from "./pages/Conciliacion";
 import CierresMensuales from "./pages/CierresMensuales";
+import Configuracion from "./pages/Configuracion";
 
 function ErrorFallback({
   error,
@@ -75,10 +76,7 @@ export default function App() {
                   <Route path="/novedades" element={<Novedades />} />
                   <Route path="/conciliacion" element={<Conciliacion />} />
                   <Route path="/cierre" element={<CierresMensuales />} />
-                  <Route
-                    path="/configuracion"
-                    element={<div className="p-8">Configuración</div>}
-                  />
+                  <Route path="/configuracion" element={<Configuracion />} />
                 </Routes>
               </div>
               <footer className="h-10 bg-slate-800 text-white flex items-center justify-between px-8 text-[10px] uppercase tracking-widest font-medium">

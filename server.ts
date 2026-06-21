@@ -157,6 +157,11 @@ const resumenController = new ResumenController();
 app.get("/api/resumen-mensual", resumenController.getResumenEnCurso);
 
 import { CierreController } from "./src/server/infrastructure/controllers/CierreController.js";
+import { ConfiguracionController } from "./src/server/infrastructure/controllers/ConfiguracionController.js";
+
+const configuracionController = new ConfiguracionController();
+app.get("/api/configuracion", configuracionController.getGlobal);
+app.put("/api/configuracion", configuracionController.upsertGlobal);
 const cierreController = new CierreController();
 app.post("/api/cierres", cierreController.cerrarMes);
 app.get("/api/cierres", cierreController.getCierres);

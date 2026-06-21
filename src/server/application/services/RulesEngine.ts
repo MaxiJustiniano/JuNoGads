@@ -15,7 +15,22 @@ export class RulesEngine {
    * Procesa un día completo de fichadas para un empleado
    * Limpia dobles fichadas, calcula tiempos y devuelve interpretación + Novedades a crear
    */
-  public evaluarDia(fechaUTC: Date, empleado: any, fichadasDelDia: Fichada[]) {
+  public evaluarDia(
+    fechaUTC: Date,
+    empleado: any,
+    fichadasDelDia: Fichada[],
+    globalConfig?: any,
+  ) {
+    const config = Object.assign(
+      {
+        toleranciaEntradaMinutos: 5,
+        toleranciaSalidaMinutos: 0,
+        umbralHorasExtraMinutos: 30,
+        tiempoMinimoDescansoMinutos: 60,
+      },
+      globalConfig || {},
+    );
+
     // La fecha proporcionada podría estar en UTC o local del server.
     // Lo ideal es tener el día en la zona horaria objetivo
     const fechaLocal = toZonedTime(fechaUTC, TZ);
@@ -186,7 +201,7 @@ export class RulesEngine {
       entradaRealDate,
       expectedEntradaDate,
     );
-    if (diffEntrada > (horario.toleranciaEntrada || 0)) {
+    if (diffEntrada > (config.toleranciaEntradaMinutos || 0)) {
       minutosTardanza = diffEntrada;
       resultado.tardanza = true;
       novedades.push({
@@ -216,13 +231,13 @@ export class RulesEngine {
         expectedSalidaDate,
       );
 
-      if (diffSalida > (horario.toleranciaSalida || 0)) {
+      if (diffSalida > (config.toleranciaSalidaMinutos || 0)) {
         minutosExtra += diffSalida;
       } else if (diffSalida < 0) {
         minutosAnticipada = Math.abs(diffSalida);
         resultado.salidaAnticipada = true;
         resultado.minutosSalidaAnticipada = minutosAnticipada;
-        if (minutosAnticipada > 15) {
+        if (minutosAnticipada > (config.toleranciaSalidaMinutos || 15)) {
           novedades.push({
             empleadoId: empleado.id,
             tipo: "SALIDA_ANTICIPADA",
@@ -238,8 +253,8 @@ export class RulesEngine {
 
       if (minutosExtra > 0) {
         resultado.horasExtra = true;
-        // Solo generar Novedad si cumple umbral de horas extra (e.g. > 30 mins)
-        if (minutosExtra > 30) {
+        // Solo generar Novedad si cumple umbral de horas extra
+        if (minutosExtra > config.umbralHorasExtraMinutos) {
           novedades.push({
             empleadoId: empleado.id,
             tipo: "HORAS_EXTRA",
