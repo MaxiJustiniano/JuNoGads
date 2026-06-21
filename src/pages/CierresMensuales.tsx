@@ -1,15 +1,7 @@
 import { useEffect, useState } from "react";
-import {
-  Lock,
-  Calendar,
-  Users,
-  Clock,
-  AlertTriangle,
-  FolderLock,
-} from "lucide-react";
+import { Lock, FolderLock, Download, CheckCircle, X } from "lucide-react";
 import api from "../lib/api";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 export default function CierresMensuales() {
   const [cierres, setCierres] = useState<any[]>([]);
@@ -17,6 +9,12 @@ export default function CierresMensuales() {
   const [periodoToClose, setPeriodoToClose] = useState(
     format(new Date(), "yyyy-MM"),
   );
+
+  const [showSuccessModal, setShowSuccessModal] = useState<{
+    show: boolean;
+    id: string;
+    periodo: string;
+  }>({ show: false, id: "", periodo: "" });
 
   const fetchCierres = async () => {
     try {
@@ -33,6 +31,24 @@ export default function CierresMensuales() {
     fetchCierres();
   }, []);
 
+  const downloadExcel = async (id: string, periodo: string) => {
+    try {
+      const response = await api.get(`/cierre/${id}/exportar`, {
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Preliquidacion_${periodo}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert("Error al generar o descargar el reporte Excel");
+    }
+  };
+
   const handleCerrarMes = async () => {
     if (
       !confirm(
@@ -42,11 +58,16 @@ export default function CierresMensuales() {
       return;
 
     try {
-      await api.post("/cierres", {
+      const res = await api.post("/cierres", {
         periodo: periodoToClose,
-        cerradoPor: "admin", // in a real app this would come from the auth token
+        cerradoPor: "admin",
       });
-      alert("Período cerrado exitosamente");
+
+      setShowSuccessModal({
+        show: true,
+        id: res.data.id,
+        periodo: res.data.periodo,
+      });
       fetchCierres();
     } catch (error: any) {
       alert(error.response?.data?.error || "Error al cerrar el mes");
@@ -106,6 +127,7 @@ export default function CierresMensuales() {
                 <th className="px-6 py-3">Cerrado Por</th>
                 <th className="px-6 py-3">Fecha de Cierre</th>
                 <th className="px-6 py-3 text-center">Estado</th>
+                <th className="px-6 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -130,12 +152,69 @@ export default function CierresMensuales() {
                       Consolidado
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => downloadExcel(c.id, c.periodo)}
+                      className="px-3 py-1 flex items-center justify-end w-full gap-1.5 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
+                    >
+                      <Download className="w-3 h-3" /> Reporte Excel
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal.show && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">
+                  Cierre Exitoso
+                </h3>
+                <p className="text-sm text-slate-500 mt-2">
+                  El período{" "}
+                  <span className="font-bold text-slate-800">
+                    {showSuccessModal.periodo}
+                  </span>{" "}
+                  ha sido cerrado y consolidado correctamente.
+                </p>
+              </div>
+
+              <div className="pt-4 space-y-3">
+                <button
+                  onClick={() => {
+                    downloadExcel(
+                      showSuccessModal.id,
+                      showSuccessModal.periodo,
+                    );
+                    setShowSuccessModal({ show: false, id: "", periodo: "" });
+                  }}
+                  className="w-full bg-emerald-600 text-white font-bold uppercase text-xs tracking-wider py-3 rounded-lg shadow flex items-center justify-center gap-2 hover:bg-emerald-700 transition"
+                >
+                  <Download className="w-4 h-4" />
+                  Descargar Reporte Excel
+                </button>
+                <button
+                  onClick={() =>
+                    setShowSuccessModal({ show: false, id: "", periodo: "" })
+                  }
+                  className="w-full bg-slate-100 text-slate-600 font-bold uppercase text-xs tracking-wider py-3 rounded-lg hover:bg-slate-200 transition"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

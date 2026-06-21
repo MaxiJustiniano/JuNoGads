@@ -159,7 +159,13 @@ export default function Novedades() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {novedades
-              .filter((nov) => filter === "TODAS" || nov.estado === filter)
+              .filter((nov) => {
+                if (filter === "TODAS") return true;
+                if (filter === "PENDIENTES" && nov.estado === "PENDIENTE") return true;
+                if (filter === "APROBADAS" && nov.estado === "APROBADA") return true;
+                if (filter === "RECHAZADAS" && nov.estado === "RECHAZADA") return true;
+                return false;
+              })
               .map((nov) => (
                 <tr
                   key={nov.id}

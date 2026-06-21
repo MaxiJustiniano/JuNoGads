@@ -2,6 +2,88 @@ import { Request, Response } from "express";
 import { supabase } from "../supabase.js";
 
 export class CierreController {
+  exportExcel = async (req: Request, res: Response) => {
+    try {
+      const { periodoId } = req.params;
+
+      const { data: cierre, error: errCierre } = await supabase
+        .from("cierres_mensuales")
+        .select("*")
+        .eq("id", periodoId)
+        .single();
+
+      if (errCierre || !cierre) {
+        return res.status(404).json({ error: "Cierre no encontrado" });
+      }
+
+      const { data: empCierres, error: errEmp } = await supabase
+        .from("cierre_empleados")
+        .select("*, empleado:empleados(*)")
+        .eq("cierreId", periodoId);
+
+      if (errEmp) throw errEmp;
+
+      const XLSX = await import("xlsx");
+
+      const rows = (empCierres || []).map((ec: any) => {
+        const emp = ec.empleado || {};
+        const snap = ec.snapshotData || {};
+        const novedades = snap.novedades || [];
+
+        // Sumar horas extras (100% vs 50% - simplificado asumiendo q si es extra normal o de finde)
+        let he50 = 0;
+        let he100 = 0;
+        // Licencias detalle
+        const licencias: string[] = [];
+
+        novedades.forEach((n: any) => {
+          if (n.tipo === "HORAS_EXTRA") {
+            // Asumimos que podemos buscar si es fin de semana (en interpretaciones) o default
+            he50 += Number(n.cantidad || 0); // Simplificación si no tenemos flag
+          } else if (
+            n.tipo.includes("LICENCIA") ||
+            n.tipo.includes("ENFERMEDAD") ||
+            n.tipo.includes("ESTUDIO")
+          ) {
+            licencias.push(`${n.tipo} (${n.cantidad} dias)`);
+          }
+        });
+
+        return {
+          Legajo: emp.legajo,
+          "Nombre Completo": `${emp.apellido}, ${emp.nombre}`,
+          "DNI/CUIL": emp.dni || emp.cuil || "-",
+          "Días Trabajados": ec.diasTrabajados,
+          "Ausencias Just. / Injust.": ec.ausenciasTotales,
+          "Tardanzas (min)": ec.minutosTardanzaTotales,
+          "Horas Extra 50%": he50,
+          "Horas Extra 100%": he100,
+          "Detalle Licencias": licencias.join(" | ") || "Sin novedades",
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Preliquidación");
+
+      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="Preliquidacion_${cierre.periodo}.xlsx"`,
+      );
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+
+      return res.send(buffer);
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ error: error.message });
+    }
+  };
+
   cerrarMes = async (req: Request, res: Response) => {
     try {
       const { periodo, cerradoPor } = req.body; // e.g. "2026-06"

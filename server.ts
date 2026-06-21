@@ -146,12 +146,10 @@ app.get("/api/novedades", novedadController.getAll);
 app.post("/api/novedades", novedadController.create);
 app.patch("/api/novedades/:id/status", novedadController.updateStatus);
 app.delete("/api/novedades/:id", (req, res) => {
-  res
-    .status(405)
-    .json({
-      error:
-        "Method Not Allowed: Las novedades son inmutables y no pueden eliminarse por reglas de negocio.",
-    });
+  res.status(405).json({
+    error:
+      "Method Not Allowed: Las novedades son inmutables y no pueden eliminarse por reglas de negocio.",
+  });
 });
 
 import { ResumenController } from "./src/server/infrastructure/controllers/ResumenController.js";
@@ -162,6 +160,7 @@ import { CierreController } from "./src/server/infrastructure/controllers/Cierre
 const cierreController = new CierreController();
 app.post("/api/cierres", cierreController.cerrarMes);
 app.get("/api/cierres", cierreController.getCierres);
+app.get("/api/cierre/:periodoId/exportar", cierreController.exportExcel);
 
 // API Error Handler
 app.use("/api/*", (req, res) => {
