@@ -145,6 +145,14 @@ const novedadController = new NovedadController();
 app.get("/api/novedades", novedadController.getAll);
 app.post("/api/novedades", novedadController.create);
 app.patch("/api/novedades/:id/status", novedadController.updateStatus);
+app.delete("/api/novedades/:id", (req, res) => {
+  res
+    .status(405)
+    .json({
+      error:
+        "Method Not Allowed: Las novedades son inmutables y no pueden eliminarse por reglas de negocio.",
+    });
+});
 
 import { ResumenController } from "./src/server/infrastructure/controllers/ResumenController.js";
 const resumenController = new ResumenController();

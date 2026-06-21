@@ -7,6 +7,7 @@ import Employees from "./pages/Employees";
 import Schedules from "./pages/Schedules";
 import Attendance from "./pages/Attendance";
 import Novedades from "./pages/Novedades";
+import Conciliacion from "./pages/Conciliacion";
 import CierresMensuales from "./pages/CierresMensuales";
 
 function ErrorFallback({
@@ -72,10 +73,7 @@ export default function App() {
                   <Route path="/horarios" element={<Schedules />} />
                   <Route path="/fichadas" element={<Attendance />} />
                   <Route path="/novedades" element={<Novedades />} />
-                  <Route
-                    path="/conciliacion"
-                    element={<div className="p-8">Conciliación (V6)</div>}
-                  />
+                  <Route path="/conciliacion" element={<Conciliacion />} />
                   <Route path="/cierre" element={<CierresMensuales />} />
                   <Route
                     path="/configuracion"
