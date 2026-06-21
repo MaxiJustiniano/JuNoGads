@@ -19,6 +19,9 @@ export default function Novedades() {
     "TODAS" | "PENDIENTES" | "APROBADAS" | "RECHAZADAS"
   >("TODAS");
 
+  const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [filterEmpleadoId, setFilterEmpleadoId] = useState("");
+
   const fetchNovedades = async () => {
     try {
       const res = await api.get("/novedades");
@@ -32,8 +35,13 @@ export default function Novedades() {
 
   const fetchResumen = async () => {
     try {
-      const mes = format(new Date(), "yyyy-MM");
-      const res = await api.get(`/resumen-mensual?mes=${mes}`);
+      const qs = new URLSearchParams();
+      if (filterMonth) qs.append("mes", filterMonth);
+      else qs.append("mes", format(new Date(), "yyyy-MM"));
+
+      if (filterEmpleadoId) qs.append("empleadoId", filterEmpleadoId);
+
+      const res = await api.get(`/resumen-mensual?${qs.toString()}`);
       const data = res.data;
 
       if (!data || Object.keys(data).length === 0) {
@@ -66,7 +74,8 @@ export default function Novedades() {
       ];
       worksheet["!cols"] = wscols;
 
-      XLSX.writeFile(workbook, `Resumen_Operativo_${mes}.xlsx`, {
+      const mesExport = filterMonth || format(new Date(), "yyyy-MM");
+      XLSX.writeFile(workbook, `Resumen_Operativo_${mesExport}.xlsx`, {
         compression: true,
       });
     } catch (e) {
@@ -91,6 +100,25 @@ export default function Novedades() {
         return "bg-slate-50 text-slate-700";
     }
   };
+
+  const getUniqueEmployees = () => {
+    const map = new Map<string, any>();
+    novedades.forEach((n) => {
+      if (n.empleado) {
+        map.set(n.empleado.id, n.empleado);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) =>
+      a.apellido.localeCompare(b.apellido),
+    );
+  };
+
+  const filteredNovedades = novedades.filter((nov) => {
+    if (filter !== "TODAS" && nov.estado !== filter) return false;
+    if (filterMonth && !nov.fechaDesde.startsWith(filterMonth)) return false;
+    if (filterEmpleadoId && nov.empleadoId !== filterEmpleadoId) return false;
+    return true;
+  });
 
   return (
     <div className="flex-1 p-6 space-y-6 overflow-y-auto max-w-7xl mx-auto">
@@ -118,7 +146,7 @@ export default function Novedades() {
         </div>
       </header>
 
-      <div className="flex gap-4 items-center">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex bg-white border border-slate-200 rounded-md p-1 shadow-sm">
           <button
             onClick={() => setFilter("TODAS")}
@@ -145,6 +173,27 @@ export default function Novedades() {
             Rechazadas
           </button>
         </div>
+
+        <div className="flex gap-2">
+          <input
+            type="month"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            className="px-3 py-1.5 text-xs border border-slate-200 rounded-md text-slate-700 focus:outline-none focus:ring focus:border-indigo-300"
+          />
+          <select
+            value={filterEmpleadoId}
+            onChange={(e) => setFilterEmpleadoId(e.target.value)}
+            className="px-3 py-1.5 text-xs border border-slate-200 rounded-md text-slate-700 focus:outline-none focus:ring focus:border-indigo-300"
+          >
+            <option value="">Todos los empleados</option>
+            {getUniqueEmployees().map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {emp.apellido}, {emp.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl card-shadow overflow-hidden">
@@ -158,84 +207,76 @@ export default function Novedades() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {novedades
-              .filter((nov) => {
-                if (filter === "TODAS") return true;
-                if (filter === "PENDIENTES" && nov.estado === "PENDIENTE") return true;
-                if (filter === "APROBADAS" && nov.estado === "APROBADA") return true;
-                if (filter === "RECHAZADAS" && nov.estado === "RECHAZADA") return true;
-                return false;
-              })
-              .map((nov) => (
-                <tr
-                  key={nov.id}
-                  className="hover:bg-slate-50/50 transition-colors"
-                >
-                  <td className="px-6 py-4 flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs uppercase">
-                      {nov.empleado?.nombre?.[0] || "?"}
-                      {nov.empleado?.apellido?.[0] || "?"}
+            {filteredNovedades.map((nov) => (
+              <tr
+                key={nov.id}
+                className="hover:bg-slate-50/50 transition-colors"
+              >
+                <td className="px-6 py-4 flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs uppercase">
+                    {nov.empleado?.nombre?.[0] || "?"}
+                    {nov.empleado?.apellido?.[0] || "?"}
+                  </div>
+                  <div>
+                    <div className="font-medium text-slate-800">
+                      {nov.empleado?.apellido || "-"},{" "}
+                      {nov.empleado?.nombre || "-"}
                     </div>
-                    <div>
-                      <div className="font-medium text-slate-800">
-                        {nov.empleado?.apellido || "-"},{" "}
-                        {nov.empleado?.nombre || "-"}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-tighter bg-indigo-50 px-1.5 rounded">
-                          {(nov.tipo || "").replace(/_/g, " ")}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-mono text-slate-700">
-                      {format(new Date(nov.fechaDesde), "dd/MM/yyyy")}
-                    </div>
-                    <div className="text-[10px] text-slate-400 uppercase">
-                      {nov.cantidad}{" "}
-                      {nov.tipo.includes("HORA")
-                        ? "Horas"
-                        : nov.tipo.includes("ANTIC") ||
-                            nov.tipo.includes("TARDANZA")
-                          ? "Minuto(s)"
-                          : "Día(s)"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${getStatusBadge(nov.estado)}`}
-                    >
-                      {nov.estado}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {nov.trazabilidad ? (
-                      <div className="text-[10px] text-slate-500">
-                        <div>
-                          <span className="font-bold">Por:</span>{" "}
-                          {nov.trazabilidad.by}
-                        </div>
-                        <div>
-                          <span className="font-bold">Motivo:</span>{" "}
-                          {nov.trazabilidad.reason}
-                        </div>
-                        <div>
-                          <span className="font-bold">Fecha:</span>{" "}
-                          {format(
-                            new Date(nov.trazabilidad.at),
-                            "dd/MM/yyyy HH:mm",
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-slate-400 uppercase">
-                        Sin trazabilidad
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-tighter bg-indigo-50 px-1.5 rounded">
+                        {(nov.tipo || "").replace(/_/g, " ")}
                       </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="font-mono text-slate-700">
+                    {format(new Date(nov.fechaDesde), "dd/MM/yyyy")}
+                  </div>
+                  <div className="text-[10px] text-slate-400 uppercase">
+                    {nov.cantidad}{" "}
+                    {nov.tipo.includes("HORA")
+                      ? "Horas"
+                      : nov.tipo.includes("ANTIC") ||
+                          nov.tipo.includes("TARDANZA")
+                        ? "Minuto(s)"
+                        : "Día(s)"}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${getStatusBadge(nov.estado)}`}
+                  >
+                    {nov.estado}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  {nov.trazabilidad ? (
+                    <div className="text-[10px] text-slate-500">
+                      <div>
+                        <span className="font-bold">Por:</span>{" "}
+                        {nov.trazabilidad.by}
+                      </div>
+                      <div>
+                        <span className="font-bold">Motivo:</span>{" "}
+                        {nov.trazabilidad.reason}
+                      </div>
+                      <div>
+                        <span className="font-bold">Fecha:</span>{" "}
+                        {format(
+                          new Date(nov.trazabilidad.at),
+                          "dd/MM/yyyy HH:mm",
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 uppercase">
+                      Sin trazabilidad
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
         {!loading && novedades.length === 0 && (
