@@ -19,6 +19,10 @@ export default function Novedades() {
   const [novedades, setNovedades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'TODAS' | 'PENDIENTES' | 'APROBADAS'>('TODAS');
+  
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [resumen, setResumen] = useState<any>(null);
 
   const fetchNovedades = async () => {
     try {
@@ -31,14 +35,34 @@ export default function Novedades() {
     }
   };
 
+  const fetchResumen = async () => {
+    if (novedades.length > 0) {
+        try {
+            const empId = novedades[0].empleadoId; // Just for demo, we grab the first employee
+            const mes = format(new Date(), 'yyyy-MM');
+            const res = await api.get(`/resumen-mensual?empleadoId=${empId}&mes=${mes}`);
+            setResumen(res.data);
+            alert(`Resumen ${mes}:\nDías Trabajados: ${res.data.diasTrabajados}\nHoras Extra Adic.: ${res.data.horasExtraTotales}\nAusencias: ${res.data.ausenciasTotales}\nTardanza Acumulada: ${res.data.minutosTardanzaTotales}m`);
+        } catch(e) {
+            console.error(e);
+        }
+    } else {
+        alert("No hay novedades para deducir un empleado de muestra.");
+    }
+  }
+
   useEffect(() => {
     fetchNovedades();
   }, []);
 
-  const handleStatusChange = async (id: string, status: string) => {
+  const handleStatusChange = async (id: string, status: string, reason?: string) => {
     try {
-      await api.patch(`/novedades/${id}/status`, { estado: status });
+      await api.patch(`/novedades/${id}/status`, { estado: status, observaciones: reason });
       fetchNovedades();
+      if (status === 'RECHAZADA') {
+        setRejectingId(null);
+        setRejectReason('');
+      }
     } catch (error) {
       alert("Error al actualizar estado");
     }
@@ -66,10 +90,19 @@ export default function Novedades() {
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight uppercase">Gestión de Novedades</h1>
           <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest">NexoLaboral • Administración de Incidencias</p>
         </div>
-        <button className="bg-indigo-600 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm active:scale-95">
-          <Plus className="w-4 h-4" />
-          Nueva Novedad
-        </button>
+        <div className="flex gap-2">
+            <button 
+                onClick={() => fetchResumen()}
+                className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-indigo-100 transition-all shadow-sm"
+            >
+                <Calendar className="w-4 h-4" />
+                Resumen Curso
+            </button>
+            <button className="bg-indigo-600 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm active:scale-95">
+            <Plus className="w-4 h-4" />
+            Nueva Novedad
+            </button>
+        </div>
       </header>
 
       <div className="flex gap-4 items-center">
@@ -136,20 +169,43 @@ export default function Novedades() {
                 </td>
                 <td className="px-6 py-4 text-right">
                   {nov.estado === 'PENDIENTE' ? (
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => handleStatusChange(nov.id, 'APROBADA')}
-                        className="px-2 py-1 bg-indigo-600 text-white text-[10px] font-bold rounded uppercase hover:bg-indigo-700 transition-colors"
-                      >
-                        Aprobar
-                      </button>
-                      <button 
-                        onClick={() => handleStatusChange(nov.id, 'RECHAZADA')}
-                        className="px-2 py-1 border border-slate-300 text-slate-600 text-[10px] font-bold rounded uppercase hover:bg-slate-100 transition-colors"
-                      >
-                        Rechazar
-                      </button>
-                    </div>
+                    rejectingId === nov.id ? (
+                      <div className="flex flex-col items-end gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="Motivo del rechazo..." 
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          className="px-2 py-1 text-xs border rounded w-48 focus:ring bg-white text-slate-800"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => setRejectingId(null)}
+                            className="px-2 py-1 text-[10px] text-slate-500 hover:text-slate-700"
+                          >Cancelar</button>
+                          <button 
+                            onClick={() => handleStatusChange(nov.id, 'RECHAZADA', rejectReason)}
+                            className="px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded uppercase hover:bg-rose-700 transition-colors"
+                          >Confirmar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => handleStatusChange(nov.id, 'APROBADA')}
+                          className="px-2 py-1 bg-indigo-600 text-white text-[10px] font-bold rounded uppercase hover:bg-indigo-700 transition-colors"
+                        >
+                          Aprobar
+                        </button>
+                        <button 
+                          onClick={() => setRejectingId(nov.id)}
+                          className="px-2 py-1 border border-slate-300 text-slate-600 text-[10px] font-bold rounded uppercase hover:bg-slate-100 transition-colors"
+                        >
+                          Rechazar
+                        </button>
+                      </div>
+                    )
                   ) : (
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Procesado</span>
                   )}

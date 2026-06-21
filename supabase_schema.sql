@@ -62,6 +62,26 @@ CREATE TABLE interpretaciones (
   estado text DEFAULT 'CALCULADO',
   "createdAt" text DEFAULT round((EXTRACT(epoch FROM now()) * 1000))::text
 );
+
+CREATE TABLE cierres_mensuales (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  periodo text UNIQUE NOT NULL,
+  "cerradoPor" text,
+  "fechaCierre" text NOT NULL,
+  "createdAt" text DEFAULT round((EXTRACT(epoch FROM now()) * 1000))::text
+);
+
+CREATE TABLE cierre_empleados (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "cierreId" uuid REFERENCES cierres_mensuales(id),
+  "empleadoId" uuid REFERENCES empleados(id),
+  "diasTrabajados" int DEFAULT 0,
+  "horasExtraTotales" numeric DEFAULT 0,
+  "ausenciasTotales" numeric DEFAULT 0,
+  "minutosTardanzaTotales" int DEFAULT 0,
+  "snapshotData" jsonb
+);
+
 INSERT INTO horarios (id, nombre, "horaEntrada", "horaSalida", "toleranciaEntrada", "toleranciaSalida", "diasLaborales") 
 VALUES (
     '81109015-ab23-4f9c-ad98-b80c352bbded', 

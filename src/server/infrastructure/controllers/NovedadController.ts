@@ -38,7 +38,7 @@ export class NovedadController {
   updateStatus = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { estado, observaciones } = req.body;
+      const { estado, observaciones, usuario } = req.body;
       const { data: novedad, error } = await supabase
         .from('novedades')
         .update({ 
@@ -47,7 +47,9 @@ export class NovedadController {
           trazabilidad: { 
             action: 'STATUS_CHANGE', 
             to: estado, 
-            at: new Date().toISOString() 
+            at: new Date().toISOString(),
+            by: usuario || 'admin',
+            reason: observaciones || 'Sin motivo especificado'
           }
         })
         .eq('id', id)
