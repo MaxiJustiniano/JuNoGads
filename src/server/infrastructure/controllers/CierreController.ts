@@ -32,12 +32,28 @@ export class CierreController {
 
         // Sumar horas extras
         let horasExtra = 0;
+        let ausenciaInjustificada = 0;
+        let ausenciaJustificada = 0;
+        let licenciaOrdinaria = 0;
+        let licenciaEnfermedad = 0;
+        let vacaciones = 0;
+        
         // Licencias detalle
         const licencias: string[] = [];
 
         novedades.forEach((n: any) => {
           if (n.tipo === "HORAS_EXTRA") {
             horasExtra += Number(n.cantidad || 0);
+          } else if (n.tipo === "AUSENCIA_INJUSTIFICADA") {
+            ausenciaInjustificada += Number(n.cantidad || 1);
+          } else if (n.tipo === "AUSENCIA_JUSTIFICADA") {
+            ausenciaJustificada += Number(n.cantidad || 1);
+          } else if (n.tipo === "LICENCIA_ORDINARIA") {
+            licenciaOrdinaria += Number(n.cantidad || 1);
+          } else if (n.tipo === "LICENCIA_ENFERMEDAD") {
+            licenciaEnfermedad += Number(n.cantidad || 1);
+          } else if (n.tipo === "VACACIONES") {
+            vacaciones += Number(n.cantidad || 1);
           } else if (
             n.tipo.includes("LICENCIA") ||
             n.tipo.includes("ENFERMEDAD") ||
@@ -52,10 +68,14 @@ export class CierreController {
           "Nombre Completo": `${emp.apellido}, ${emp.nombre}`,
           "DNI/CUIL": emp.dni || emp.cuil || "-",
           "Días Trabajados": ec.diasTrabajados,
-          "Ausencias Just. / Injust.": ec.ausenciasTotales,
+          "Ausencias Justificadas": ausenciaJustificada,
+          "Ausencias Injustificadas": ausenciaInjustificada,
+          "Licencias Ordinarias": licenciaOrdinaria,
+          "Licencias por Enfermedad": licenciaEnfermedad,
+          "Vacaciones": vacaciones,
           "Tardanzas (min)": ec.minutosTardanzaTotales,
           "Horas Extra": horasExtra,
-          "Detalle Licencias": licencias.join(" | ") || "Sin novedades",
+          "Detalle Otros": licencias.join(" | ") || "Sin novedades",
         };
       });
 
