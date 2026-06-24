@@ -436,8 +436,8 @@ export default function Employees() {
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                         >
                           <option value="">Seleccione Horario</option>
-                          {horarios.map(h => (
-                            <option key={h.id} value={h.id} disabled={h.estado !== 'ACTIVO' && h.id !== formData.horarioId}>
+                          {horarios.filter(h => h.estado === 'ACTIVO' || h.id === formData.horarioId).map(h => (
+                            <option key={h.id} value={h.id}>
                               {h.nombre} ({h.horaEntrada} - {h.horaSalida}) {h.estado !== 'ACTIVO' ? '(Inactivo)' : ''}
                             </option>
                           ))}
