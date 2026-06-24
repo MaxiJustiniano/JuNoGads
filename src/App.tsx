@@ -1,5 +1,11 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
+import { useAppStore } from "./store/useAppStore";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
@@ -9,6 +15,7 @@ import Novedades from "./pages/Novedades";
 import Conciliacion from "./pages/Conciliacion";
 import CierresMensuales from "./pages/CierresMensuales";
 import Configuracion from "./pages/Configuracion";
+import Login from "./pages/Login";
 
 function ErrorFallback({
   error,
@@ -55,34 +62,44 @@ function ErrorFallback({
 }
 
 export default function App() {
+  const { currentUser } = useAppStore();
+
   return (
     <ErrorBoundary
       FallbackComponent={ErrorFallback}
       onReset={() => window.location.reload()}
     >
       <Router>
-        <div className="min-h-screen bg-slate-50">
-          <Sidebar />
-          <div className="flex flex-col min-h-screen">
-            <main className="ml-64 flex-1 flex flex-col pt-4">
-              <div className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/empleados" element={<Employees />} />
-                  <Route path="/horarios" element={<Schedules />} />
-                  <Route path="/fichadas" element={<Attendance />} />
-                  <Route path="/novedades" element={<Novedades />} />
-                  <Route path="/conciliacion" element={<Conciliacion />} />
-                  <Route path="/cierre" element={<CierresMensuales />} />
-                  <Route path="/configuracion" element={<Configuracion />} />
-                </Routes>
-              </div>
-              <footer className="h-10 bg-slate-800 text-white flex items-center justify-end px-8 text-[10px] uppercase tracking-widest font-medium shrink-0">
-                <div>PYMETIME V1.0.4 • 2026</div>
-              </footer>
-            </main>
+        {!currentUser ? (
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        ) : (
+          <div className="min-h-screen bg-slate-50">
+            <Sidebar />
+            <div className="flex flex-col min-h-screen">
+              <main className="ml-64 flex-1 flex flex-col pt-4">
+                <div className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/empleados" element={<Employees />} />
+                    <Route path="/horarios" element={<Schedules />} />
+                    <Route path="/fichadas" element={<Attendance />} />
+                    <Route path="/novedades" element={<Novedades />} />
+                    <Route path="/conciliacion" element={<Conciliacion />} />
+                    <Route path="/cierre" element={<CierresMensuales />} />
+                    <Route path="/configuracion" element={<Configuracion />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </div>
+                <footer className="h-10 bg-slate-800 text-white flex items-center justify-end px-8 text-[10px] uppercase tracking-widest font-medium shrink-0">
+                  <div>PYMETIME V1.0.4 • 2026</div>
+                </footer>
+              </main>
+            </div>
           </div>
-        </div>
+        )}
       </Router>
     </ErrorBoundary>
   );

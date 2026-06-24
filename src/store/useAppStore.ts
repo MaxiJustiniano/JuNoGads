@@ -1,34 +1,34 @@
-import { create } from 'zustand';
-import api from '../lib/api';
+import { create } from "zustand";
+import api from "../lib/api";
 
 export enum Role {
-  ADMIN = 'ADMIN',
-  EMPLOYEE = 'EMPLOYEE',
-  ACCOUNTANT = 'ACCOUNTANT'
+  ADMIN = "ADMIN",
+  EMPLOYEE = "EMPLOYEE",
+  ACCOUNTANT = "ACCOUNTANT",
 }
 
 export enum FichadaType {
-  IN = 'IN',
-  OUT = 'OUT'
+  IN = "IN",
+  OUT = "OUT",
 }
 
 export enum NovedadType {
-  TARDANZA = 'TARDANZA',
-  AUSENCIA = 'AUSENCIA',
-  HORA_EXTRA_50 = 'HORA_EXTRA_50',
-  HORA_EXTRA_100 = 'HORA_EXTRA_100',
-  SALIDA_ANTICIPADA = 'SALIDA_ANTICIPADA',
-  LICENCIA_MEDICA = 'LICENCIA_MEDICA',
-  VACACIONES = 'VACACIONES',
-  SUSPENSION = 'SUSPENSION',
-  EXAMEN = 'EXAMEN',
-  PERMISO_ESPECIAL = 'PERMISO_ESPECIAL'
+  TARDANZA = "TARDANZA",
+  AUSENCIA = "AUSENCIA",
+  HORA_EXTRA_50 = "HORA_EXTRA_50",
+  HORA_EXTRA_100 = "HORA_EXTRA_100",
+  SALIDA_ANTICIPADA = "SALIDA_ANTICIPADA",
+  LICENCIA_MEDICA = "LICENCIA_MEDICA",
+  VACACIONES = "VACACIONES",
+  SUSPENSION = "SUSPENSION",
+  EXAMEN = "EXAMEN",
+  PERMISO_ESPECIAL = "PERMISO_ESPECIAL",
 }
 
 export enum NovedadStatus {
-  PENDIENTE = 'PENDIENTE',
-  APROBADA = 'APROBADA',
-  RECHAZADA = 'RECHAZADA'
+  PENDIENTE = "PENDIENTE",
+  APROBADA = "APROBADA",
+  RECHAZADA = "RECHAZADA",
 }
 
 export interface User {
@@ -48,8 +48,8 @@ export interface Empleado {
   cuil: string;
   fechaIngreso: string;
   categoria: string;
-  tipoJornada: 'FULL_TIME' | 'PART_TIME' | 'FLEX';
-  estado: 'ACTIVO' | 'INACTIVO';
+  tipoJornada: "FULL_TIME" | "PART_TIME" | "FLEX";
+  estado: "ACTIVO" | "INACTIVO";
   horarioId: string;
 }
 
@@ -61,10 +61,10 @@ export interface Horario {
   toleranciaEntrada: number; // minutos
   toleranciaSalida: number; // minutos
   diasLaborales: number[]; // 0-6
-  tipoJornada: 'TURNO_FIJO' | 'TURNO_ROTATIVO' | 'FLEXIBLE' | 'REDUCIDA';
+  tipoJornada: "TURNO_FIJO" | "TURNO_ROTATIVO" | "FLEXIBLE" | "REDUCIDA";
   tiempoMinimoDescanso: number; // minutos
   umbralHorasExtra: number; // horas
-  estado: 'ACTIVO' | 'INACTIVO';
+  estado: "ACTIVO" | "INACTIVO";
 }
 
 export interface Fichada {
@@ -72,7 +72,7 @@ export interface Fichada {
   empleadoId: string;
   timestamp: string;
   tipo: FichadaType;
-  origen: 'MANUAL' | 'BIOMETRICO' | 'QR' | 'API';
+  origen: "MANUAL" | "BIOMETRICO" | "QR" | "API";
   creadoPor: string;
   observaciones?: string;
 }
@@ -99,66 +99,84 @@ interface AppState {
   setEmployees: (emps: Empleado[]) => void;
   setCurrentUser: (user: User | null) => void;
   fetchEmployees: () => Promise<void>;
-  createEmployee: (data: Omit<Empleado, 'id' | 'estado'>) => Promise<void>;
+  createEmployee: (data: Omit<Empleado, "id" | "estado">) => Promise<void>;
   updateEmployee: (id: string, data: Partial<Empleado>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   fetchHorarios: () => Promise<void>;
-  createSchedule: (data: Omit<Horario, 'id'>) => Promise<void>;
+  createSchedule: (data: Omit<Horario, "id">) => Promise<void>;
   updateSchedule: (id: string, data: Partial<Horario>) => Promise<void>;
   deleteSchedule: (id: string) => Promise<void>;
   fetchFichadas: () => Promise<void>;
   fetchNovedades: () => Promise<void>;
 }
 
+const getInitialUser = (): User | null => {
+  try {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const useAppStore = create<AppState>((set) => ({
-  currentUser: {
-    id: '1',
-    name: 'Admin PymeTime',
-    email: 'admin@pymetime.com',
-    role: Role.ADMIN,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin'
-  },
+  currentUser: getInitialUser(),
   empleados: [],
   horarios: [],
   fichadas: [],
   novedades: [],
   setEmployees: (empleados: Empleado[]) => set({ empleados }),
-  setCurrentUser: (currentUser: User | null) => set({ currentUser }),
+  setCurrentUser: (currentUser: User | null) => {
+    if (currentUser) {
+      localStorage.setItem("user", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+    }
+    set({ currentUser });
+  },
   fetchEmployees: async () => {
     try {
-      const response = await api.get('/empleados');
+      const response = await api.get("/empleados");
       if (Array.isArray(response.data)) {
         set({ empleados: response.data });
       } else {
-        console.error('Expected array of employees, got:', response.data);
+        console.error("Expected array of employees, got:", response.data);
         set({ empleados: [] });
       }
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error("Error fetching employees:", error);
       set({ empleados: [] });
     }
   },
   createEmployee: async (data) => {
     try {
-      console.log('Enviando datos de empleado:', data);
+      console.log("Enviando datos de empleado:", data);
       const payload = {
         ...data,
-        estado: (data as any).estado || 'ACTIVO',
-        categoria: data.categoria || 'Administrativo', 
-        tipoJornada: data.tipoJornada || 'FULL_TIME'
+        estado: (data as any).estado || "ACTIVO",
+        categoria: data.categoria || "Administrativo",
+        tipoJornada: data.tipoJornada || "FULL_TIME",
       };
-      const response = await api.post('/empleados', payload);
-      console.log('Respuesta de creación:', response.data);
+      const response = await api.post("/empleados", payload);
+      console.log("Respuesta de creación:", response.data);
     } catch (error: any) {
       if (error.response) {
-        const contentType = error.response.headers['content-type'];
-        if (contentType && contentType.includes('text/html')) {
-          console.error('El servidor devolvió HTML en lugar de JSON. ¿Ruta incorrecta o caída?');
-          throw new Error('El servidor devolvió una página de error (404/500). Revisa las credenciales de Supabase.');
+        const contentType = error.response.headers["content-type"];
+        if (contentType && contentType.includes("text/html")) {
+          console.error(
+            "El servidor devolvió HTML en lugar de JSON. ¿Ruta incorrecta o caída?",
+          );
+          throw new Error(
+            "El servidor devolvió una página de error (404/500). Revisa las credenciales de Supabase.",
+          );
         }
-        console.error('Error in createEmployee:', error.response.data || error.message);
+        console.error(
+          "Error in createEmployee:",
+          error.response.data || error.message,
+        );
       } else {
-        console.error('Error in createEmployee (No response):', error.message);
+        console.error("Error in createEmployee (No response):", error.message);
       }
       throw error;
     }
@@ -167,9 +185,16 @@ export const useAppStore = create<AppState>((set) => ({
     try {
       await api.put(`/empleados/${id}`, data);
       const emps = useAppStore.getState().empleados;
-      set({ empleados: emps.map(emp => emp.id === id ? { ...emp, ...data } : emp) });
+      set({
+        empleados: emps.map((emp) =>
+          emp.id === id ? { ...emp, ...data } : emp,
+        ),
+      });
     } catch (error: any) {
-      console.error('Error in updateEmployee:', error.response?.data || error.message);
+      console.error(
+        "Error in updateEmployee:",
+        error.response?.data || error.message,
+      );
       throw error;
     }
   },
@@ -177,27 +202,33 @@ export const useAppStore = create<AppState>((set) => ({
     try {
       await api.delete(`/empleados/${id}`);
       const emps = useAppStore.getState().empleados;
-      set({ empleados: emps.filter(emp => emp.id !== id) });
+      set({ empleados: emps.filter((emp) => emp.id !== id) });
     } catch (error: any) {
-      console.error('Error in deleteEmployee:', error.response?.data || error.message);
+      console.error(
+        "Error in deleteEmployee:",
+        error.response?.data || error.message,
+      );
       throw error;
     }
   },
   fetchHorarios: async () => {
     try {
-      const response = await api.get('/horarios');
+      const response = await api.get("/horarios");
       set({ horarios: Array.isArray(response.data) ? response.data : [] });
     } catch (error) {
-      console.error('Error fetching schedules:', error);
+      console.error("Error fetching schedules:", error);
       set({ horarios: [] });
     }
   },
   createSchedule: async (data) => {
     try {
-      const response = await api.post('/horarios', data);
+      const response = await api.post("/horarios", data);
       set({ horarios: [...useAppStore.getState().horarios, response.data] });
     } catch (error: any) {
-      console.error('Error in createSchedule:', error.response?.data || error.message);
+      console.error(
+        "Error in createSchedule:",
+        error.response?.data || error.message,
+      );
       throw error;
     }
   },
@@ -205,9 +236,12 @@ export const useAppStore = create<AppState>((set) => ({
     try {
       const response = await api.put(`/horarios/${id}`, data);
       const horarios = useAppStore.getState().horarios;
-      set({ horarios: horarios.map(h => h.id === id ? response.data : h) });
+      set({ horarios: horarios.map((h) => (h.id === id ? response.data : h)) });
     } catch (error: any) {
-      console.error('Error in updateSchedule:', error.response?.data || error.message);
+      console.error(
+        "Error in updateSchedule:",
+        error.response?.data || error.message,
+      );
       throw error;
     }
   },
@@ -215,29 +249,36 @@ export const useAppStore = create<AppState>((set) => ({
     try {
       await api.delete(`/horarios/${id}`);
       const horarios = useAppStore.getState().horarios;
-      set({ horarios: horarios.map(h => h.id === id ? { ...h, estado: 'INACTIVO' } : h) });
+      set({
+        horarios: horarios.map((h) =>
+          h.id === id ? { ...h, estado: "INACTIVO" } : h,
+        ),
+      });
     } catch (error: any) {
-      console.error('Error in deleteSchedule:', error.response?.data || error.message);
+      console.error(
+        "Error in deleteSchedule:",
+        error.response?.data || error.message,
+      );
       throw error;
     }
   },
   fetchFichadas: async () => {
     try {
-      const response = await api.get('/fichadas/recientes');
+      const response = await api.get("/fichadas/recientes");
       // Supabase or API might return an array
       set({ fichadas: Array.isArray(response.data) ? response.data : [] });
     } catch (error) {
-      console.error('Error fetching attendance:', error);
+      console.error("Error fetching attendance:", error);
       set({ fichadas: [] });
     }
   },
   fetchNovedades: async () => {
     try {
-      const response = await api.get('/novedades');
+      const response = await api.get("/novedades");
       set({ novedades: Array.isArray(response.data) ? response.data : [] });
     } catch (error) {
-      console.error('Error fetching novedades:', error);
+      console.error("Error fetching novedades:", error);
       set({ novedades: [] });
     }
-  }
+  },
 }));
