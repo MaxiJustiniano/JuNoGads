@@ -16,6 +16,8 @@ import api from "../lib/api";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion, AnimatePresence } from "motion/react";
+import * as XLSX from "xlsx";
+import { Download, Upload } from "lucide-react";
 
 export default function Attendance() {
   const { empleados, fetchEmployees } = useAppStore();
@@ -37,6 +39,11 @@ export default function Attendance() {
   const [fechaInterpretacion, setFechaInterpretacion] = useState(
     format(new Date(), "yyyy-MM-dd"),
   );
+
+  const [file, setFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [importSuccess, setImportSuccess] = useState("");
 
   const fetchRecent = async () => {
     try {
@@ -116,6 +123,132 @@ export default function Attendance() {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([
+      {
+        Legajo: "L01",
+        FechaHora: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+        Tipo: "ENTRADA",
+        Origen: "MANUAL",
+        Observaciones: "Llegada tarde por tráfico",
+      },
+      {
+        Legajo: "L01",
+        FechaHora: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+        Tipo: "SALIDA",
+        Origen: "MANUAL",
+        Observaciones: "",
+      },
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Fichadas");
+    XLSX.writeFile(wb, "plantilla_fichadas.xlsx");
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setImportError("");
+      setImportSuccess("");
+    }
+  };
+
+  const handleImport = async () => {
+    if (!file) return;
+    setImportLoading(true);
+    setImportError("");
+    setImportSuccess("");
+
+    try {
+      const data = await new Promise<any[]>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const result = new Uint8Array(e.target?.result as ArrayBuffer);
+            const wb = XLSX.read(result, { type: "array" });
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            const json = XLSX.utils.sheet_to_json(ws, { raw: false });
+            resolve(json);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+
+      if (!data || data.length === 0) {
+        throw new Error(
+          "El archivo está vacío o no tiene el formato correcto.",
+        );
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of data) {
+        try {
+          const legajo = row.Legajo?.toString();
+          const empleado = empleados.find((e) => e.legajo === legajo);
+          if (!empleado) {
+            throw new Error(`Empleado con legajo ${legajo} no encontrado.`);
+          }
+
+          let dateStr = row.FechaHora || row.Fecha;
+          if (!dateStr)
+            throw new Error(`Falta FechaHora para legajo ${legajo}`);
+
+          let timestamp = new Date(dateStr);
+          if (isNaN(timestamp.getTime()) && typeof dateStr === "string") {
+            const [datePart, timePart] = dateStr.split(" ");
+            if (datePart && datePart.includes("/")) {
+              const [d, m, y] = datePart.split("/");
+              if (y && y.length === 4) {
+                const timeStr = timePart || "00:00:00";
+                timestamp = new Date(
+                  `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T${timeStr}`,
+                );
+              }
+            }
+          }
+
+          if (isNaN(timestamp.getTime())) {
+            throw new Error(`Fecha inválida para legajo ${legajo}: ${dateStr}`);
+          }
+
+          await api.post("/fichadas", {
+            empleadoId: empleado.id,
+            tipo: row.Tipo || "ENTRADA",
+            origen: row.Origen || "MANUAL",
+            observaciones: row.Observaciones || "",
+            creadoPor: "admin_import",
+            timestamp: timestamp.toISOString(),
+          });
+          successCount++;
+        } catch (err) {
+          console.error(err);
+          errorCount++;
+        }
+      }
+
+      setImportSuccess(
+        `Importación: ${successCount} ok, ${errorCount} errores.`,
+      );
+      fetchRecent();
+      if (activeTab === "MOTOR") fetchInterpretaciones();
+      setFile(null);
+    } catch (err: any) {
+      setImportError(err.message || "Error al procesar el archivo Excel.");
+    } finally {
+      setImportLoading(false);
+      const fileInput = document.getElementById(
+        "excel-upload",
+      ) as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+    }
+  };
+
   return (
     <div className="flex-1 p-6 space-y-6 overflow-y-auto max-w-7xl mx-auto">
       <header className="flex justify-between items-end">
@@ -155,127 +288,197 @@ export default function Attendance() {
       {activeTab === "FICHADAS" ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Registro Manual */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 card-shadow flex flex-col space-y-6">
-            <div className="flex items-center space-x-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
-              <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold">
-                <Clock className="w-4 h-4" />
-              </div>
-              <h3 className="font-bold text-slate-700">Registrar Fichada</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                  Empleado
-                </label>
-                <select
-                  value={selectedEmpleado}
-                  onChange={(e) => setSelectedEmpleado(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
-                >
-                  <option value="">Seleccionar empleado...</option>
-                  {empleados.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.apellido}, {emp.nombre} (#{emp.legajo})
-                    </option>
-                  ))}
-                </select>
+          <div className="flex flex-col space-y-6">
+            <div className="bg-white p-6 rounded-xl border border-slate-200 card-shadow flex flex-col space-y-6">
+              <div className="flex items-center space-x-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-slate-700">Registrar Fichada</h3>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                  Fecha y Hora (Opcional - por defecto Actual)
-                </label>
-                <input
-                  type="datetime-local"
-                  value={timestampManual}
-                  onChange={(e) => setTimestampManual(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-slate-700"
-                />
-              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                    Empleado
+                  </label>
+                  <select
+                    value={selectedEmpleado}
+                    onChange={(e) => setSelectedEmpleado(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
+                  >
+                    <option value="">Seleccionar empleado...</option>
+                    {empleados.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.apellido}, {emp.nombre} (#{emp.legajo})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                  Tipo de Fichada
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: "ENTRADA", label: "Entrada", icon: LogIn },
-                    { id: "SALIDA", label: "Salida", icon: LogOut },
-                    {
-                      id: "INICIO_DESCANSO",
-                      label: "Inicio Desc.",
-                      icon: Coffee,
-                    },
-                    { id: "FIN_DESCANSO", label: "Fin Desc.", icon: Clock },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setTipo(t.id as any)}
-                      className={`py-2 px-1 rounded-md border text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${
-                        tipo === t.id
-                          ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                          : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                      }`}
-                    >
-                      <t.icon className="w-3.5 h-3.5" />
-                      {t.label}
-                    </button>
-                  ))}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                    Fecha y Hora (Opcional - por defecto Actual)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={timestampManual}
+                    onChange={(e) => setTimestampManual(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-slate-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                    Tipo de Fichada
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "ENTRADA", label: "Entrada", icon: LogIn },
+                      { id: "SALIDA", label: "Salida", icon: LogOut },
+                      {
+                        id: "INICIO_DESCANSO",
+                        label: "Inicio Desc.",
+                        icon: Coffee,
+                      },
+                      { id: "FIN_DESCANSO", label: "Fin Desc.", icon: Clock },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTipo(t.id as any)}
+                        className={`py-2 px-1 rounded-md border text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${
+                          tipo === t.id
+                            ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                        }`}
+                      >
+                        <t.icon className="w-3.5 h-3.5" />
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                    Origen
+                  </label>
+                  <select
+                    value={origen}
+                    onChange={(e) => setOrigen(e.target.value as any)}
+                    className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
+                  >
+                    <option value="MANUAL">Manual (Admin)</option>
+                    <option value="BIOMETRICO">Dispositivo Biométrico</option>
+                    <option value="QR">Código QR</option>
+                    <option value="PIN">PIN / Teclado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                    Observaciones
+                  </label>
+                  <input
+                    type="text"
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
+                    placeholder="Justificaciones, notas..."
+                    className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                  Origen
-                </label>
-                <select
-                  value={origen}
-                  onChange={(e) => setOrigen(e.target.value as any)}
-                  className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
-                >
-                  <option value="MANUAL">Manual (Admin)</option>
-                  <option value="BIOMETRICO">Dispositivo Biométrico</option>
-                  <option value="QR">Código QR</option>
-                  <option value="PIN">PIN / Teclado</option>
-                </select>
-              </div>
+              <button
+                disabled={!selectedEmpleado || loading}
+                onClick={handleRegister}
+                className="w-full bg-indigo-600 text-white py-3 rounded-md font-bold text-xs uppercase tracking-widest shadow-sm hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex items-center justify-center gap-2"
+              >
+                {loading ? "Procesando..." : "Confirmar Fichada"}
+              </button>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                  Observaciones
-                </label>
-                <input
-                  type="text"
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  placeholder="Justificaciones, notas..."
-                  className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
-                />
-              </div>
+              <AnimatePresence>
+                {success && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 justify-center text-green-700 bg-green-100 py-2 rounded font-bold text-[10px] uppercase"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Registro Guardado (Inmutable)
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            <button
-              disabled={!selectedEmpleado || loading}
-              onClick={handleRegister}
-              className="w-full bg-indigo-600 text-white py-3 rounded-md font-bold text-xs uppercase tracking-widest shadow-sm hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex items-center justify-center gap-2"
-            >
-              {loading ? "Procesando..." : "Confirmar Fichada"}
-            </button>
+            {/* Importación por Excel */}
+            <div className="bg-white p-6 rounded-xl border border-slate-200 card-shadow flex flex-col space-y-6">
+              <div className="flex items-center space-x-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div className="w-8 h-8 bg-emerald-600 rounded flex items-center justify-center text-white font-bold">
+                  <Upload className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-700">Importar Excel</h3>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+                    Carga masiva
+                  </p>
+                </div>
+              </div>
 
-            <AnimatePresence>
-              {success && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 justify-center text-green-700 bg-green-100 py-2 rounded font-bold text-[10px] uppercase"
+              <div className="space-y-4">
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="w-full flex items-center justify-center py-2 px-4 border border-slate-300 rounded-md shadow-sm text-xs font-bold uppercase tracking-widest text-slate-700 bg-white hover:bg-slate-50 transition-all"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Registro Guardado (Inmutable)
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <Download className="w-4 h-4 mr-2" />
+                  Descargar Modelo
+                </button>
+
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
+                  <input
+                    id="excel-upload"
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="excel-upload"
+                    className="cursor-pointer flex flex-col items-center space-y-2"
+                  >
+                    <Upload className="w-6 h-6 text-slate-400" />
+                    <span className="text-xs font-medium text-indigo-600 hover:text-indigo-500">
+                      Seleccionar archivo Excel
+                    </span>
+                    {file && (
+                      <span className="text-[10px] text-slate-500">
+                        {file.name}
+                      </span>
+                    )}
+                  </label>
+                </div>
+
+                {importError && (
+                  <div className="p-3 bg-red-50 text-red-600 text-xs rounded-md border border-red-200">
+                    {importError}
+                  </div>
+                )}
+                {importSuccess && (
+                  <div className="p-3 bg-emerald-50 text-emerald-600 text-xs rounded-md border border-emerald-200">
+                    {importSuccess}
+                  </div>
+                )}
+
+                <button
+                  disabled={!file || importLoading}
+                  onClick={handleImport}
+                  className="w-full bg-emerald-600 text-white py-3 rounded-md font-bold text-xs uppercase tracking-widest shadow-sm hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {importLoading ? "Importando..." : "Subir y Registrar"}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Listado Reciente */}
