@@ -78,29 +78,49 @@ export default function Attendance() {
     }
   }, [activeTab, fechaInterpretacion]);
 
+  const [registroType, setRegistroType] = useState<"FICHADA" | "NOVEDAD">("FICHADA");
+  const [novedadTipo, setNovedadTipo] = useState<"AUSENCIA_JUSTIFICADA" | "AUSENCIA_INJUSTIFICADA" | "LICENCIA_ORDINARIA" | "LICENCIA_ENFERMEDAD" | "VACACIONES">("AUSENCIA_INJUSTIFICADA");
+  const [fechaDesde, setFechaDesde] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [fechaHasta, setFechaHasta] = useState("");
+
   const handleRegister = async () => {
     if (!selectedEmpleado) return;
     setLoading(true);
     try {
-      await api.post("/fichadas", {
-        empleadoId: selectedEmpleado,
-        tipo,
-        origen,
-        observaciones,
-        creadoPor: "admin",
-        timestamp: timestampManual
-          ? new Date(timestampManual).toISOString()
-          : new Date().toISOString(),
-      });
+      if (registroType === "FICHADA") {
+        await api.post("/fichadas", {
+          empleadoId: selectedEmpleado,
+          tipo,
+          origen,
+          observaciones,
+          creadoPor: "admin",
+          timestamp: timestampManual
+            ? new Date(timestampManual).toISOString()
+            : new Date().toISOString(),
+        });
+        setTimestampManual("");
+      } else {
+        await api.post("/novedades", {
+          empleadoId: selectedEmpleado,
+          tipo: novedadTipo,
+          fechaDesde,
+          fechaHasta: fechaHasta ? fechaHasta : fechaDesde,
+          cantidad: 1, // Will be ignored for most date-range logic, but good to have a default
+          estado: "APROBADA", // By default approve it from Admin
+          observaciones,
+          esAutomatica: false,
+        });
+        setFechaDesde(format(new Date(), "yyyy-MM-dd"));
+        setFechaHasta("");
+      }
       setSuccess(true);
       fetchRecent();
       if (activeTab === "MOTOR") fetchInterpretaciones();
       setObservaciones("");
-      setTimestampManual("");
       setTimeout(() => setSuccess(false), 3000);
     } catch (error: any) {
       alert(
-        "Error al registrar fichada: " +
+        "Error al registrar: " +
           (error.response?.data?.error || error.message),
       );
     } finally {
@@ -294,7 +314,30 @@ export default function Attendance() {
                 <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold">
                   <Clock className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-slate-700">Registrar Fichada</h3>
+                <h3 className="font-bold text-slate-700">Registrar</h3>
+              </div>
+
+              <div className="flex bg-slate-100 p-1 rounded-md">
+                <button
+                  onClick={() => setRegistroType("FICHADA")}
+                  className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-all ${
+                    registroType === "FICHADA"
+                      ? "bg-white text-indigo-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Fichada
+                </button>
+                <button
+                  onClick={() => setRegistroType("NOVEDAD")}
+                  className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-all ${
+                    registroType === "NOVEDAD"
+                      ? "bg-white text-indigo-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Ausencia / Licencia
+                </button>
               </div>
 
               <div className="space-y-4">
@@ -316,64 +359,112 @@ export default function Attendance() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                    Fecha y Hora (Opcional - por defecto Actual)
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={timestampManual}
-                    onChange={(e) => setTimestampManual(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-slate-700"
-                  />
-                </div>
+                {registroType === "FICHADA" ? (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                        Fecha y Hora (Opcional - por defecto Actual)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={timestampManual}
+                        onChange={(e) => setTimestampManual(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-slate-700"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                    Tipo de Fichada
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "ENTRADA", label: "Entrada", icon: LogIn },
-                      { id: "SALIDA", label: "Salida", icon: LogOut },
-                      {
-                        id: "INICIO_DESCANSO",
-                        label: "Inicio Desc.",
-                        icon: Coffee,
-                      },
-                      { id: "FIN_DESCANSO", label: "Fin Desc.", icon: Clock },
-                    ].map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setTipo(t.id as any)}
-                        className={`py-2 px-1 rounded-md border text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${
-                          tipo === t.id
-                            ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                        }`}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                        Tipo de Fichada
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: "ENTRADA", label: "Entrada", icon: LogIn },
+                          { id: "SALIDA", label: "Salida", icon: LogOut },
+                          {
+                            id: "INICIO_DESCANSO",
+                            label: "Inicio Desc.",
+                            icon: Coffee,
+                          },
+                          { id: "FIN_DESCANSO", label: "Fin Desc.", icon: Clock },
+                        ].map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setTipo(t.id as any)}
+                            className={`py-2 px-1 rounded-md border text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${
+                              tipo === t.id
+                                ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                                : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                            }`}
+                          >
+                            <t.icon className="w-3.5 h-3.5" />
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                        Origen
+                      </label>
+                      <select
+                        value={origen}
+                        onChange={(e) => setOrigen(e.target.value as any)}
+                        className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
                       >
-                        <t.icon className="w-3.5 h-3.5" />
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                    Origen
-                  </label>
-                  <select
-                    value={origen}
-                    onChange={(e) => setOrigen(e.target.value as any)}
-                    className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
-                  >
-                    <option value="MANUAL">Manual (Admin)</option>
-                    <option value="BIOMETRICO">Dispositivo Biométrico</option>
-                    <option value="QR">Código QR</option>
-                    <option value="PIN">PIN / Teclado</option>
-                  </select>
-                </div>
+                        <option value="MANUAL">Manual (Admin)</option>
+                        <option value="BIOMETRICO">Dispositivo Biométrico</option>
+                        <option value="QR">Código QR</option>
+                        <option value="PIN">PIN / Teclado</option>
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                        Tipo de Ausencia / Licencia
+                      </label>
+                      <select
+                        value={novedadTipo}
+                        onChange={(e) => setNovedadTipo(e.target.value as any)}
+                        className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-700"
+                      >
+                        <option value="AUSENCIA_INJUSTIFICADA">Ausencia Injustificada</option>
+                        <option value="AUSENCIA_JUSTIFICADA">Ausencia Justificada</option>
+                        <option value="LICENCIA_ORDINARIA">Licencia Ordinaria / Especial</option>
+                        <option value="LICENCIA_ENFERMEDAD">Licencia por Enfermedad</option>
+                        <option value="VACACIONES">Vacaciones</option>
+                      </select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                          Fecha Desde
+                        </label>
+                        <input
+                          type="date"
+                          value={fechaDesde}
+                          onChange={(e) => setFechaDesde(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-slate-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                          Fecha Hasta
+                        </label>
+                        <input
+                          type="date"
+                          value={fechaHasta}
+                          onChange={(e) => setFechaHasta(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-slate-700"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">
@@ -394,7 +485,7 @@ export default function Attendance() {
                 onClick={handleRegister}
                 className="w-full bg-indigo-600 text-white py-3 rounded-md font-bold text-xs uppercase tracking-widest shadow-sm hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex items-center justify-center gap-2"
               >
-                {loading ? "Procesando..." : "Confirmar Fichada"}
+                {loading ? "Procesando..." : (registroType === "FICHADA" ? "Confirmar Fichada" : "Confirmar Novedad")}
               </button>
 
               <AnimatePresence>

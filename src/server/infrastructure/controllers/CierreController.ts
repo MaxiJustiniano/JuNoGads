@@ -30,16 +30,14 @@ export class CierreController {
         const snap = ec.snapshotData || {};
         const novedades = snap.novedades || [];
 
-        // Sumar horas extras (100% vs 50% - simplificado asumiendo q si es extra normal o de finde)
-        let he50 = 0;
-        let he100 = 0;
+        // Sumar horas extras
+        let horasExtra = 0;
         // Licencias detalle
         const licencias: string[] = [];
 
         novedades.forEach((n: any) => {
           if (n.tipo === "HORAS_EXTRA") {
-            // Asumimos que podemos buscar si es fin de semana (en interpretaciones) o default
-            he50 += Number(n.cantidad || 0); // Simplificación si no tenemos flag
+            horasExtra += Number(n.cantidad || 0);
           } else if (
             n.tipo.includes("LICENCIA") ||
             n.tipo.includes("ENFERMEDAD") ||
@@ -56,8 +54,7 @@ export class CierreController {
           "Días Trabajados": ec.diasTrabajados,
           "Ausencias Just. / Injust.": ec.ausenciasTotales,
           "Tardanzas (min)": ec.minutosTardanzaTotales,
-          "Horas Extra 50%": he50,
-          "Horas Extra 100%": he100,
+          "Horas Extra": horasExtra,
           "Detalle Licencias": licencias.join(" | ") || "Sin novedades",
         };
       });

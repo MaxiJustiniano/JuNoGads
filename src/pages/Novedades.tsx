@@ -226,7 +226,7 @@ export default function Novedades() {
                 </td>
                 <td className="px-6 py-4">
                   <div className="font-mono text-slate-700">
-                    {format(new Date(nov.fechaDesde), "dd/MM/yyyy")}
+                    {nov.fechaDesde.split("T")[0].split("-").reverse().join("/")}
                   </div>
                   <div className="text-[10px] text-slate-400 uppercase">
                     {nov.cantidad}{" "}
