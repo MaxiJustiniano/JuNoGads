@@ -59,7 +59,7 @@ export default function Employees() {
       fechaIngreso: format(new Date(), 'yyyy-MM-dd'),
       categoria: '',
       tipoJornada: 'FULL_TIME',
-      horarioId: horarios.length > 0 ? horarios[0].id : '',
+      horarioId: horarios.find(h => h.estado === 'ACTIVO')?.id || '',
       estado: 'ACTIVO'
     });
     setIsModalOpen(true);
@@ -76,7 +76,7 @@ export default function Employees() {
       fechaIngreso: emp.fechaIngreso ? emp.fechaIngreso.split('T')[0] : format(new Date(), 'yyyy-MM-dd'),
       categoria: emp.categoria || '',
       tipoJornada: emp.tipoJornada || 'FULL_TIME',
-      horarioId: emp.horarioId || (horarios.length > 0 ? horarios[0].id : ''),
+      horarioId: emp.horarioId || (horarios.find(h => h.estado === 'ACTIVO')?.id || ''),
       estado: emp.estado || 'ACTIVO'
     });
     setIsModalOpen(true);
@@ -437,7 +437,9 @@ export default function Employees() {
                         >
                           <option value="">Seleccione Horario</option>
                           {horarios.map(h => (
-                            <option key={h.id} value={h.id}>{h.nombre} ({h.horaEntrada} - {h.horaSalida})</option>
+                            <option key={h.id} value={h.id} disabled={h.estado !== 'ACTIVO' && h.id !== formData.horarioId}>
+                              {h.nombre} ({h.horaEntrada} - {h.horaSalida}) {h.estado !== 'ACTIVO' ? '(Inactivo)' : ''}
+                            </option>
                           ))}
                         </select>
                       </div>
