@@ -42,24 +42,34 @@ export class CierreController {
         const licencias: string[] = [];
 
         novedades.forEach((n: any) => {
+          let days = Number(n.cantidad || 1);
+          if (n.fechaDesde) {
+            const start = new Date(n.fechaDesde);
+            const end = n.fechaHasta ? new Date(n.fechaHasta) : start;
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+              const diffTime = Math.abs(end.getTime() - start.getTime());
+              days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            }
+          }
+
           if (n.tipo === "HORAS_EXTRA") {
             horasExtra += Number(n.cantidad || 0);
           } else if (n.tipo === "AUSENCIA_INJUSTIFICADA") {
-            ausenciaInjustificada += Number(n.cantidad || 1);
+            ausenciaInjustificada += days;
           } else if (n.tipo === "AUSENCIA_JUSTIFICADA") {
-            ausenciaJustificada += Number(n.cantidad || 1);
+            ausenciaJustificada += days;
           } else if (n.tipo === "LICENCIA_ORDINARIA") {
-            licenciaOrdinaria += Number(n.cantidad || 1);
+            licenciaOrdinaria += days;
           } else if (n.tipo === "LICENCIA_ENFERMEDAD") {
-            licenciaEnfermedad += Number(n.cantidad || 1);
+            licenciaEnfermedad += days;
           } else if (n.tipo === "VACACIONES") {
-            vacaciones += Number(n.cantidad || 1);
+            vacaciones += days;
           } else if (
             n.tipo.includes("LICENCIA") ||
             n.tipo.includes("ENFERMEDAD") ||
             n.tipo.includes("ESTUDIO")
           ) {
-            licencias.push(`${n.tipo} (${n.cantidad} dias)`);
+            licencias.push(`${n.tipo} (${days} dias)`);
           }
         });
 

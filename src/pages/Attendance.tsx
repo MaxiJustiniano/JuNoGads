@@ -100,12 +100,20 @@ export default function Attendance() {
         });
         setTimestampManual("");
       } else {
+        const start = new Date(fechaDesde);
+        const end = fechaHasta ? new Date(fechaHasta) : start;
+        let days = 1;
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+          const diffTime = Math.abs(end.getTime() - start.getTime());
+          days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        }
+
         await api.post("/novedades", {
           empleadoId: selectedEmpleado,
           tipo: novedadTipo,
           fechaDesde,
           fechaHasta: fechaHasta ? fechaHasta : fechaDesde,
-          cantidad: 1, // Will be ignored for most date-range logic, but good to have a default
+          cantidad: days,
           estado: "APROBADA", // By default approve it from Admin
           observaciones,
           esAutomatica: false,
