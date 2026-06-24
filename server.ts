@@ -159,7 +159,11 @@ app.get("/api/resumen-mensual", resumenController.getResumenEnCurso);
 import { CierreController } from "./src/server/infrastructure/controllers/CierreController.js";
 import { ConfiguracionController } from "./src/server/infrastructure/controllers/ConfiguracionController.js";
 import { AuthController } from "./src/server/infrastructure/controllers/AuthController.js";
-import { verifyToken, requireAdmin } from "./src/server/infrastructure/middlewares/authMiddleware.js";
+import { UserController } from "./src/server/infrastructure/controllers/UserController.js";
+import {
+  verifyToken,
+  requireAdmin,
+} from "./src/server/infrastructure/middlewares/authMiddleware.js";
 
 const authController = new AuthController();
 // Rutas públicas
@@ -167,6 +171,12 @@ app.post("/api/auth/login", authController.login);
 
 // Nota: Para proteger las rutas en el futuro, se puede aplicar globalmente o ruta por ruta:
 // app.use("/api/*", verifyToken, requireAdmin);
+
+const userController = new UserController();
+app.get("/api/usuarios", userController.getUsers);
+app.post("/api/usuarios", userController.createUser);
+app.put("/api/usuarios/:id", userController.updateUser);
+app.delete("/api/usuarios/:id", userController.deleteUser);
 
 const configuracionController = new ConfiguracionController();
 app.get("/api/configuracion", configuracionController.getGlobal);

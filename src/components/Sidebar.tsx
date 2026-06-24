@@ -94,6 +94,7 @@ export default function Sidebar() {
               icon={ShieldCheck}
               label="Cierre Mensual"
             />
+            <SidebarItem to="/usuarios" icon={Users} label="Usuarios" />
             <SidebarItem
               to="/configuracion"
               icon={Settings}

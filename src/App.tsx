@@ -15,6 +15,7 @@ import Novedades from "./pages/Novedades";
 import Conciliacion from "./pages/Conciliacion";
 import CierresMensuales from "./pages/CierresMensuales";
 import Configuracion from "./pages/Configuracion";
+import Usuarios from "./pages/Usuarios";
 import Login from "./pages/Login";
 
 function ErrorFallback({
@@ -89,6 +90,7 @@ export default function App() {
                     <Route path="/novedades" element={<Novedades />} />
                     <Route path="/conciliacion" element={<Conciliacion />} />
                     <Route path="/cierre" element={<CierresMensuales />} />
+                    <Route path="/usuarios" element={<Usuarios />} />
                     <Route path="/configuracion" element={<Configuracion />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
