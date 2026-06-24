@@ -65,4 +65,61 @@ export class AuthController {
       return res.status(500).json({ error: "Error interno del servidor" });
     }
   };
+
+  changePassword = async (req: Request, res: Response) => {
+    try {
+      // Usamos el ID del usuario extraído por el middleware authMiddleware (AuthRequest)
+      const userId = (req as any).user?.userId;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ error: "No autorizado" });
+      }
+
+      if (!currentPassword || !newPassword) {
+        return res
+          .status(400)
+          .json({ error: "La contraseña actual y la nueva son requeridas" });
+      }
+
+      // 1. Obtener el usuario
+      const { data: user, error } = await supabase
+        .from("usuarios")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error || !user) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      // 2. Validar contraseña actual
+      const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!isMatch) {
+        return res
+          .status(401)
+          .json({ error: "La contraseña actual es incorrecta" });
+      }
+
+      // 3. Hashear y actualizar la nueva contraseña
+      const salt = await bcrypt.genSalt(10);
+      const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+      const { error: updateError } = await supabase
+        .from("usuarios")
+        .update({ password_hash: newPasswordHash })
+        .eq("id", userId);
+
+      if (updateError) {
+        return res
+          .status(500)
+          .json({ error: "Error al actualizar la contraseña" });
+      }
+
+      return res.json({ message: "Contraseña actualizada exitosamente" });
+    } catch (error: any) {
+      console.error("Error en changePassword:", error.message);
+      return res.status(500).json({ error: "Error interno del servidor" });
+    }
+  };
 }

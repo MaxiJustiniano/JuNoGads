@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Users as UsersIcon, Edit2, Trash2 } from "lucide-react";
+import { Plus, Users as UsersIcon, Edit2 } from "lucide-react";
 import api from "../lib/api";
 
 interface User {
@@ -56,18 +56,6 @@ export default function Usuarios() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Estás seguro de eliminar este usuario?")) return;
-    try {
-      setLoading(true);
-      await api.delete(`/usuarios/${id}`);
-      fetchUsers();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Error al eliminar usuario");
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -92,25 +80,25 @@ export default function Usuarios() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="flex-1 p-6 space-y-6 overflow-y-auto max-w-7xl mx-auto">
+      <header className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center">
-            <UsersIcon className="w-6 h-6 mr-2 text-indigo-600" />
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight uppercase flex items-center">
+            <UsersIcon className="w-8 h-8 mr-3 text-indigo-600" />
             Usuarios del Sistema
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Gestión de accesos y cuentas de usuario
+          <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest">
+            NexoLaboral • Accesos y Cuentas
           </p>
         </div>
         <button
           onClick={openNewModal}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm active:scale-95"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4" />
           Nuevo Usuario
         </button>
-      </div>
+      </header>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-lg text-sm border border-red-200">
@@ -165,13 +153,6 @@ export default function Usuarios() {
                         title="Editar"
                       >
                         <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(u.id)}
-                        className="text-slate-400 hover:text-red-600 transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>

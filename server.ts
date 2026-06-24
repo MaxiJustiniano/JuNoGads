@@ -168,6 +168,11 @@ import {
 const authController = new AuthController();
 // Rutas públicas
 app.post("/api/auth/login", authController.login);
+app.put(
+  "/api/auth/password",
+  verifyToken as any,
+  authController.changePassword,
+);
 
 // Nota: Para proteger las rutas en el futuro, se puede aplicar globalmente o ruta por ruta:
 // app.use("/api/*", verifyToken, requireAdmin);
