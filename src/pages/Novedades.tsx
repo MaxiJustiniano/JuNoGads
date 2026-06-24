@@ -113,7 +113,9 @@ export default function Novedades() {
   };
 
   const filteredNovedades = novedades.filter((nov) => {
-    if (filter !== "TODAS" && nov.estado !== filter) return false;
+    if (filter === "PENDIENTES" && nov.estado !== "PENDIENTE") return false;
+    if (filter === "APROBADAS" && nov.estado !== "APROBADA") return false;
+    if (filter === "RECHAZADAS" && nov.estado !== "RECHAZADA") return false;
     if (filterMonth && !nov.fechaDesde.startsWith(filterMonth)) return false;
     if (filterEmpleadoId && nov.empleadoId !== filterEmpleadoId) return false;
     return true;

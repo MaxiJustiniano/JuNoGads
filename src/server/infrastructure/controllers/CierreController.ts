@@ -38,9 +38,6 @@ export class CierreController {
         let licenciaEnfermedad = 0;
         let vacaciones = 0;
         
-        // Licencias detalle
-        const licencias: string[] = [];
-
         novedades.forEach((n: any) => {
           let days = Number(n.cantidad || 1);
           if (n.fechaDesde) {
@@ -64,12 +61,6 @@ export class CierreController {
             licenciaEnfermedad += days;
           } else if (n.tipo === "VACACIONES") {
             vacaciones += days;
-          } else if (
-            n.tipo.includes("LICENCIA") ||
-            n.tipo.includes("ENFERMEDAD") ||
-            n.tipo.includes("ESTUDIO")
-          ) {
-            licencias.push(`${n.tipo} (${days} dias)`);
           }
         });
 
@@ -85,7 +76,6 @@ export class CierreController {
           "Vacaciones": vacaciones,
           "Tardanzas (min)": ec.minutosTardanzaTotales,
           "Horas Extra": horasExtra,
-          "Detalle Otros": licencias.join(" | ") || "Sin novedades",
         };
       });
 
